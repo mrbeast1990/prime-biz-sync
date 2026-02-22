@@ -4,12 +4,18 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
   Barcode, Search, Plus, Minus, Trash2, CreditCard, Banknote, User, ShoppingCart, X,
-  RotateCcw, AlertTriangle, UserPlus, Loader2,
+  RotateCcw, AlertTriangle, UserPlus, Loader2, ChevronDown,
 } from 'lucide-react';
 import { Product, CartItem, SaleMode } from '@/types';
 import { cn } from '@/lib/utils';
 import { toast } from '@/hooks/use-toast';
 import { useProducts, useContacts, useCreateInvoice, useUpdateProductStock } from '@/hooks/useSupabaseData';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 const saleModes: { mode: SaleMode; label: string; icon: React.ElementType; variant: 'default' | 'secondary' | 'outline' | 'destructive' }[] = [
   { mode: 'cash', label: 'نقداً', icon: Banknote, variant: 'default' },
@@ -128,7 +134,7 @@ export default function POS() {
       };
       toast({
         title: saleMode === 'return' ? 'تم الاسترجاع' : saleMode === 'damage' ? 'تم تسجيل الإتلاف' : 'تم البيع بنجاح',
-        description: `${modeLabels[saleMode]} بقيمة ${total.toFixed(2)} ر.س`,
+        description: `${modeLabels[saleMode]} بقيمة ${total.toFixed(2)} د.ل`,
       });
       clearCart();
       setCustomerName('');
@@ -160,8 +166,8 @@ export default function POS() {
               {filteredProducts.map((product) => (
                 <button key={product.id} onClick={() => addToCart(product)} disabled={product.stock_quantity === 0}
                   className={cn('rounded-lg bg-card p-4 text-right shadow-card transition-all hover:shadow-md hover:scale-[1.02] active:scale-[0.98]', product.stock_quantity === 0 && 'opacity-50 cursor-not-allowed')}>
-                  <p className="font-medium text-card-foreground line-clamp-1">{product.trade_name}</p>
-                  <p className="mt-1 text-xs text-muted-foreground line-clamp-1">{product.scientific_name}</p>
+                  <p className="font-medium text-card-foreground text-sm leading-tight">{product.trade_name}</p>
+                  <p className="mt-1 text-xs text-muted-foreground leading-tight">{product.scientific_name}</p>
                   <div className="mt-2 flex items-center justify-between">
                     <span className="text-lg font-bold text-primary tabular-nums">{product.sale_price.toFixed(2)}</span>
                     <span className={cn('text-xs font-medium rounded-full px-2 py-0.5', product.stock_quantity <= product.min_stock ? 'bg-destructive/10 text-destructive' : 'bg-success/10 text-success')}>{product.stock_quantity}</span>
@@ -194,7 +200,7 @@ export default function POS() {
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
                         <p className="font-medium text-card-foreground">{item.product.trade_name}</p>
-                        <p className="text-sm text-muted-foreground">{item.product.sale_price.toFixed(2)} ر.س</p>
+                        <p className="text-sm text-muted-foreground">{item.product.sale_price.toFixed(2)} د.ل</p>
                       </div>
                       <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive hover:text-destructive" onClick={() => removeFromCart(item.product.id)}><Trash2 className="h-3 w-3" /></Button>
                     </div>
@@ -204,7 +210,7 @@ export default function POS() {
                         <span className="w-8 text-center font-medium tabular-nums">{item.quantity}</span>
                         <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => updateQuantity(item.product.id, 1)}><Plus className="h-3 w-3" /></Button>
                       </div>
-                      <p className="font-bold text-card-foreground tabular-nums">{item.total.toFixed(2)} ر.س</p>
+                      <p className="font-bold text-card-foreground tabular-nums">{item.total.toFixed(2)} د.ل</p>
                     </div>
                   </div>
                 ))}
@@ -212,15 +218,23 @@ export default function POS() {
             )}
           </div>
           <div className="border-t border-border p-4 space-y-3">
-            <div className="flex flex-wrap gap-2">
-              {saleModes.map(({ mode, label, icon: Icon }) => (
-                <Button key={mode} size="sm" variant={saleMode === mode ? 'default' : 'outline'}
-                  className={cn('gap-1.5 text-xs flex-1 min-w-0', saleMode === mode && mode === 'damage' && 'bg-destructive text-destructive-foreground hover:bg-destructive/90')}
-                  onClick={() => setSaleMode(mode)}>
-                  <Icon className="h-3.5 w-3.5" />{label}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant={saleMode === 'damage' ? 'destructive' : 'default'} className="w-full gap-2 justify-between">
+                  <span className="flex items-center gap-2">
+                    {(() => { const current = saleModes.find(m => m.mode === saleMode); const Icon = current!.icon; return <><Icon className="h-4 w-4" />{current!.label}</>; })()}
+                  </span>
+                  <ChevronDown className="h-4 w-4" />
                 </Button>
-              ))}
-            </div>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="w-[var(--radix-dropdown-menu-trigger-width)] bg-popover" align="start">
+                {saleModes.map(({ mode, label, icon: Icon }) => (
+                  <DropdownMenuItem key={mode} onClick={() => setSaleMode(mode)} className={cn('gap-2 cursor-pointer', saleMode === mode && 'bg-accent')}>
+                    <Icon className="h-4 w-4" />{label}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
             {saleMode === 'credit' && (
               <div className="relative">
                 <User className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -231,7 +245,7 @@ export default function POS() {
             <div className="rounded-lg bg-primary/10 p-4">
               <div className="flex items-center justify-between">
                 <span className="text-muted-foreground">الإجمالي</span>
-                <span className="text-3xl font-bold text-primary tabular-nums">{total.toFixed(2)} ر.س</span>
+                <span className="text-3xl font-bold text-primary tabular-nums">{total.toFixed(2)} د.ل</span>
               </div>
             </div>
             <Button size="lg" className={cn('w-full gap-2', saleMode === 'damage' && 'bg-destructive hover:bg-destructive/90')} onClick={handleCheckout} disabled={createInvoice.isPending}>
