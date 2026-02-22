@@ -78,3 +78,34 @@ export interface CartItem {
   quantity: number;
   total: number;
 }
+
+// Insurance Customer
+export interface InsuranceCustomer {
+  id: string;
+  name: string;
+  cardNumber: string;
+  phone: string;
+  balance: number;
+  createdAt: string;
+}
+
+// Insurance Sale
+export interface InsuranceSale {
+  id: string;
+  customerId: string;
+  customerName: string;
+  items: CartItem[];
+  total: number;
+  date: string;
+}
+
+// Purchase Order
+export interface PurchaseOrder {
+  id: string;
+  supplierId: string;
+  supplierName: string;
+  items: InvoiceItem[];
+  total: number;
+  date: string;
+  status: 'pending' | 'completed';
+}
