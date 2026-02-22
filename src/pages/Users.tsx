@@ -35,7 +35,7 @@ const roleBadgeVariant: Record<string, 'default' | 'secondary' | 'outline'> = {
 export default function Users() {
   const queryClient = useQueryClient();
   const [addOpen, setAddOpen] = useState(false);
-  const [newEmail, setNewEmail] = useState('');
+  const [newUsername, setNewUsername] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [newName, setNewName] = useState('');
   const [newRole, setNewRole] = useState<string>('user');
@@ -85,8 +85,9 @@ export default function Users() {
     setAddLoading(true);
     
     // Sign up the new user
+    const email = newUsername.includes('@') ? newUsername : `${newUsername}@app.local`;
     const { data, error } = await supabase.auth.signUp({
-      email: newEmail,
+      email,
       password: newPassword,
       options: { data: { display_name: newName } },
     });
@@ -105,7 +106,7 @@ export default function Users() {
     toast({ title: 'تم إضافة المستخدم بنجاح' });
     queryClient.invalidateQueries({ queryKey: ['users-with-roles'] });
     setAddOpen(false);
-    setNewEmail('');
+    setNewUsername('');
     setNewPassword('');
     setNewName('');
     setNewRole('user');
@@ -137,8 +138,8 @@ export default function Users() {
                   <Input value={newName} onChange={e => setNewName(e.target.value)} required />
                 </div>
                 <div className="space-y-2">
-                  <Label>البريد الإلكتروني</Label>
-                  <Input type="email" value={newEmail} onChange={e => setNewEmail(e.target.value)} required />
+                  <Label>اسم المستخدم</Label>
+                  <Input value={newUsername} onChange={e => setNewUsername(e.target.value)} required placeholder="اسم الدخول" />
                 </div>
                 <div className="space-y-2">
                   <Label>كلمة المرور</Label>
