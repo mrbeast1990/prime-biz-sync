@@ -5,8 +5,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Search, Plus, Minus, Trash2, Barcode, PackagePlus, UserPlus, Truck, Save, Loader2 } from 'lucide-react';
+import { Search, Plus, Minus, Trash2, Barcode, PackagePlus, UserPlus, Truck, Save, Loader2, Calendar } from 'lucide-react';
 import { Contact, Product, InvoiceItem } from '@/types';
+
+interface PurchaseItem extends InvoiceItem {
+  has_expiry?: boolean;
+  expiry_date?: string;
+}
 import { cn } from '@/lib/utils';
 import { toast } from '@/hooks/use-toast';
 import { SupplierModal } from '@/components/purchases/SupplierModal';
@@ -21,7 +26,7 @@ export default function Purchases() {
 
   const [selectedSupplier, setSelectedSupplier] = useState<Contact | null>(null);
   const [showSupplierModal, setShowSupplierModal] = useState(false);
-  const [items, setItems] = useState<InvoiceItem[]>([]);
+  const [items, setItems] = useState<PurchaseItem[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [barcodeInput, setBarcodeInput] = useState('');
 
@@ -48,6 +53,8 @@ export default function Purchases() {
         quantity: 1,
         unit_price: product.cost_price,
         total: product.cost_price,
+        has_expiry: product.has_expiry || false,
+        expiry_date: '',
       }]);
     }
   };
@@ -76,6 +83,8 @@ export default function Purchases() {
   const handleSave = async () => {
     if (!selectedSupplier) { toast({ title: 'خطأ', description: 'اختر المورد أولاً', variant: 'destructive' }); return; }
     if (items.length === 0) { toast({ title: 'خطأ', description: 'أضف أصنافاً أولاً', variant: 'destructive' }); return; }
+    const missingExpiry = items.find(i => i.has_expiry && !i.expiry_date);
+    if (missingExpiry) { toast({ title: 'خطأ', description: `أدخل تاريخ الصلاحية لـ ${missingExpiry.product_name}`, variant: 'destructive' }); return; }
 
     try {
       await createInvoice.mutateAsync({
@@ -99,7 +108,7 @@ export default function Purchases() {
         await updateStock.mutateAsync({ id: item.product_id, delta: item.quantity });
       }
 
-      toast({ title: 'تم حفظ فاتورة المشتريات', description: `إجمالي ${total.toFixed(2)} ر.س من ${selectedSupplier.name}` });
+      toast({ title: 'تم حفظ فاتورة المشتريات', description: `إجمالي ${total.toFixed(2)} د.ل من ${selectedSupplier.name}` });
       setItems([]);
       setSelectedSupplier(null);
     } catch {
@@ -141,8 +150,8 @@ export default function Purchases() {
               <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
                 {filteredProducts.map((product) => (
                   <button key={product.id} onClick={() => addProduct(product)} className="rounded-lg bg-muted/50 p-3 text-right transition-all hover:bg-muted active:scale-[0.98]">
-                    <p className="text-sm font-medium text-card-foreground line-clamp-1">{product.trade_name}</p>
-                    <p className="text-xs text-muted-foreground tabular-nums">{product.cost_price.toFixed(2)} ر.س</p>
+                    <p className="text-sm font-medium text-card-foreground leading-tight">{product.trade_name}</p>
+                    <p className="text-xs text-muted-foreground tabular-nums">{product.cost_price.toFixed(2)} د.ل</p>
                   </button>
                 ))}
               </div>
@@ -189,7 +198,15 @@ export default function Purchases() {
                         <Input type="number" value={item.unit_price} onChange={(e) => updateItem(item.id, 'unit_price', Math.max(0, +e.target.value))} className="h-6 text-xs" />
                       </div>
                     </div>
-                    <p className="mt-1 text-left text-sm font-bold text-card-foreground tabular-nums">{item.total.toFixed(2)} ر.س</p>
+                    {item.has_expiry && (
+                      <div className="mt-2">
+                        <Label className="text-xs flex items-center gap-1"><Calendar className="h-3 w-3" />تاريخ الصلاحية <span className="text-destructive">*</span></Label>
+                        <Input type="date" value={item.expiry_date || ''} onChange={(e) => {
+                          setItems(items.map(i => i.id === item.id ? { ...i, expiry_date: e.target.value } : i));
+                        }} className={cn("h-6 text-xs mt-1", !item.expiry_date && "border-destructive")} />
+                      </div>
+                    )}
+                    <p className="mt-1 text-left text-sm font-bold text-card-foreground tabular-nums">{item.total.toFixed(2)} د.ل</p>
                   </div>
                 ))}
               </div>
@@ -199,7 +216,7 @@ export default function Purchases() {
             <div className="mb-4 rounded-lg bg-primary/10 p-4">
               <div className="flex items-center justify-between">
                 <span className="text-muted-foreground">الإجمالي</span>
-                <span className="text-3xl font-bold text-primary tabular-nums">{total.toFixed(2)} ر.س</span>
+                <span className="text-3xl font-bold text-primary tabular-nums">{total.toFixed(2)} د.ل</span>
               </div>
             </div>
             <Button size="lg" className="w-full gap-2" onClick={handleSave} disabled={createInvoice.isPending}>

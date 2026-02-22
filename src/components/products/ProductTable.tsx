@@ -85,8 +85,8 @@ export function ProductTable({ products, onEdit, onDelete }: ProductTableProps) 
                     {product.stock_quantity}
                   </span>
                 </td>
-                <td className="px-4 py-3 tabular-nums text-muted-foreground">{product.cost_price.toFixed(2)} ر.س</td>
-                <td className="px-4 py-3 tabular-nums font-medium text-card-foreground">{product.sale_price.toFixed(2)} ر.س</td>
+                <td className="px-4 py-3 tabular-nums text-muted-foreground">{product.cost_price.toFixed(2)} د.ل</td>
+                <td className="px-4 py-3 tabular-nums font-medium text-card-foreground">{product.sale_price.toFixed(2)} د.ل</td>
                 <td className="px-4 py-3">
                   {product.has_expiry ? (
                     <span
