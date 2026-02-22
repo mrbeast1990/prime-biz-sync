@@ -13,6 +13,7 @@ import {
   Users,
   Wallet,
   BarChart3,
+  UserCog,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -31,6 +32,7 @@ const navItems: NavItem[] = [
   { title: 'الحسابات', href: '/accounts', icon: Users },
   { title: 'الخزينة', href: '/treasury', icon: Wallet },
   { title: 'التقارير', href: '/reports', icon: BarChart3 },
+  { title: 'إدارة المستخدمين', href: '/users', icon: UserCog },
   { title: 'الإعدادات', href: '/settings', icon: Settings },
 ];
 
