@@ -24,7 +24,6 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
-  { title: 'لوحة التحكم', href: '/', icon: LayoutDashboard },
   { title: 'البيع للتأمين', href: '/insurance-pos', icon: Shield },
   { title: 'البيع السريع', href: '/pos', icon: Zap },
   { title: 'بطاقة صنف', href: '/products', icon: Package },
@@ -34,6 +33,7 @@ const navItems: NavItem[] = [
   { title: 'التقارير', href: '/reports', icon: BarChart3 },
   { title: 'إدارة المستخدمين', href: '/users', icon: UserCog },
   { title: 'الإعدادات', href: '/settings', icon: Settings },
+  { title: 'لوحة التحكم', href: '/', icon: LayoutDashboard },
 ];
 
 export function Sidebar() {

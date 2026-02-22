@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Product } from '@/types';
-import { Shuffle } from 'lucide-react';
+import { Shuffle, Plus, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -19,7 +19,7 @@ interface ProductModalProps {
   product?: Product | null;
 }
 
-const categories = [
+const defaultCategories = [
   'مسكنات',
   'مضادات حيوية',
   'مسكنات موضعية',
@@ -30,11 +30,41 @@ const categories = [
   'أدوية السكري',
 ];
 
+const CATEGORIES_STORAGE_KEY = 'product_categories';
+
 const packagingTypes = ['علبة', 'شريط', 'قطعة', 'أنبوب', 'زجاجة'];
 
 const generateCode = () => Math.floor(1000 + Math.random() * 9000).toString();
 
 export function ProductModal({ isOpen, onClose, onSave, product }: ProductModalProps) {
+  const [categories, setCategories] = useState<string[]>(() => {
+    const saved = localStorage.getItem(CATEGORIES_STORAGE_KEY);
+    return saved ? JSON.parse(saved) : defaultCategories;
+  });
+  const [newCategory, setNewCategory] = useState('');
+  const [showAddCategory, setShowAddCategory] = useState(false);
+
+  const handleAddCategory = () => {
+    const trimmed = newCategory.trim();
+    if (trimmed && !categories.includes(trimmed)) {
+      const updated = [...categories, trimmed];
+      setCategories(updated);
+      localStorage.setItem(CATEGORIES_STORAGE_KEY, JSON.stringify(updated));
+      setFormData({ ...formData, category: trimmed });
+      setNewCategory('');
+      setShowAddCategory(false);
+    }
+  };
+
+  const handleDeleteCategory = (cat: string) => {
+    const updated = categories.filter((c) => c !== cat);
+    setCategories(updated);
+    localStorage.setItem(CATEGORIES_STORAGE_KEY, JSON.stringify(updated));
+    if (formData.category === cat) {
+      setFormData({ ...formData, category: '' });
+    }
+  };
+
   const [formData, setFormData] = useState({
     barcode: '',
     trade_name: '',
@@ -153,18 +183,53 @@ export function ProductModal({ isOpen, onClose, onSave, product }: ProductModalP
           <div className="grid grid-cols-3 gap-4">
             <div className="space-y-2">
               <Label htmlFor="category">التصنيف</Label>
-              <select
-                id="category"
-                value={formData.category}
-                onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm input-focus"
-                required
-              >
-                <option value="">اختر التصنيف</option>
-                {categories.map((cat) => (
-                  <option key={cat} value={cat}>{cat}</option>
-                ))}
-              </select>
+              <div className="flex gap-2">
+                <select
+                  id="category"
+                  value={formData.category}
+                  onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                  className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm input-focus"
+                  required
+                >
+                  <option value="">اختر التصنيف</option>
+                  {categories.map((cat) => (
+                    <option key={cat} value={cat}>{cat}</option>
+                  ))}
+                </select>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  onClick={() => setShowAddCategory(!showAddCategory)}
+                  title="إضافة تصنيف"
+                >
+                  <Plus className="h-4 w-4" />
+                </Button>
+              </div>
+              {showAddCategory && (
+                <div className="flex gap-2 mt-2">
+                  <Input
+                    value={newCategory}
+                    onChange={(e) => setNewCategory(e.target.value)}
+                    placeholder="اسم التصنيف الجديد"
+                    className="input-focus"
+                    onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddCategory())}
+                  />
+                  <Button type="button" size="sm" onClick={handleAddCategory}>إضافة</Button>
+                </div>
+              )}
+              {showAddCategory && categories.length > 0 && (
+                <div className="flex flex-wrap gap-1 mt-2">
+                  {categories.map((cat) => (
+                    <span key={cat} className="inline-flex items-center gap-1 rounded-full bg-muted px-2.5 py-0.5 text-xs">
+                      {cat}
+                      <button type="button" onClick={() => handleDeleteCategory(cat)} className="text-muted-foreground hover:text-destructive">
+                        <X className="h-3 w-3" />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              )}
             </div>
             <div className="space-y-2">
               <Label htmlFor="packaging_type">نوع التعبئة</Label>
