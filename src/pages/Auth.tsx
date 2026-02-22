@@ -5,47 +5,25 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from '@/hooks/use-toast';
 import { ShoppingCart, Loader2 } from 'lucide-react';
 
 export default function Auth() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
-  const [loginEmail, setLoginEmail] = useState('');
-  const [loginPassword, setLoginPassword] = useState('');
-  const [signupEmail, setSignupEmail] = useState('');
-  const [signupPassword, setSignupPassword] = useState('');
-  const [signupName, setSignupName] = useState('');
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    const { error } = await supabase.auth.signInWithPassword({
-      email: loginEmail,
-      password: loginPassword,
-    });
+    // Use username as email with a fixed domain
+    const email = username.includes('@') ? username : `${username}@app.local`;
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
     setLoading(false);
     if (error) {
-      toast({ title: 'خطأ في تسجيل الدخول', description: error.message, variant: 'destructive' });
+      toast({ title: 'خطأ في تسجيل الدخول', description: 'اسم المستخدم أو كلمة المرور غير صحيحة', variant: 'destructive' });
     } else {
-      navigate('/');
-    }
-  };
-
-  const handleSignup = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    const { error } = await supabase.auth.signUp({
-      email: signupEmail,
-      password: signupPassword,
-      options: { data: { display_name: signupName } },
-    });
-    setLoading(false);
-    if (error) {
-      toast({ title: 'خطأ في إنشاء الحساب', description: error.message, variant: 'destructive' });
-    } else {
-      toast({ title: 'تم إنشاء الحساب بنجاح', description: 'يمكنك الآن تسجيل الدخول' });
       navigate('/');
     }
   };
@@ -61,48 +39,19 @@ export default function Auth() {
           <CardDescription>سجّل دخولك للمتابعة</CardDescription>
         </CardHeader>
         <CardContent>
-          <Tabs defaultValue="login" className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="login">تسجيل الدخول</TabsTrigger>
-              <TabsTrigger value="signup">إنشاء حساب</TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="login">
-              <form onSubmit={handleLogin} className="space-y-4 mt-4">
-                <div className="space-y-2">
-                  <Label>البريد الإلكتروني</Label>
-                  <Input type="email" value={loginEmail} onChange={e => setLoginEmail(e.target.value)} required placeholder="example@mail.com" />
-                </div>
-                <div className="space-y-2">
-                  <Label>كلمة المرور</Label>
-                  <Input type="password" value={loginPassword} onChange={e => setLoginPassword(e.target.value)} required placeholder="••••••••" />
-                </div>
-                <Button type="submit" className="w-full" disabled={loading}>
-                  {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'دخول'}
-                </Button>
-              </form>
-            </TabsContent>
-
-            <TabsContent value="signup">
-              <form onSubmit={handleSignup} className="space-y-4 mt-4">
-                <div className="space-y-2">
-                  <Label>الاسم</Label>
-                  <Input value={signupName} onChange={e => setSignupName(e.target.value)} required placeholder="اسم المستخدم" />
-                </div>
-                <div className="space-y-2">
-                  <Label>البريد الإلكتروني</Label>
-                  <Input type="email" value={signupEmail} onChange={e => setSignupEmail(e.target.value)} required placeholder="example@mail.com" />
-                </div>
-                <div className="space-y-2">
-                  <Label>كلمة المرور</Label>
-                  <Input type="password" value={signupPassword} onChange={e => setSignupPassword(e.target.value)} required minLength={6} placeholder="6 أحرف على الأقل" />
-                </div>
-                <Button type="submit" className="w-full" disabled={loading}>
-                  {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'إنشاء حساب'}
-                </Button>
-              </form>
-            </TabsContent>
-          </Tabs>
+          <form onSubmit={handleLogin} className="space-y-4">
+            <div className="space-y-2">
+              <Label>اسم المستخدم</Label>
+              <Input value={username} onChange={e => setUsername(e.target.value)} required placeholder="أدخل اسم المستخدم" />
+            </div>
+            <div className="space-y-2">
+              <Label>كلمة المرور</Label>
+              <Input type="password" value={password} onChange={e => setPassword(e.target.value)} required placeholder="••••••••" />
+            </div>
+            <Button type="submit" className="w-full" disabled={loading}>
+              {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'دخول'}
+            </Button>
+          </form>
         </CardContent>
       </Card>
     </div>
