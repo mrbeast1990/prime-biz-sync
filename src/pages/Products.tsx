@@ -31,7 +31,7 @@ export default function Products() {
   const handleDelete = (product: Product) => {
     if (window.confirm(`هل أنت متأكد من حذف "${product.trade_name}"؟`)) {
       setProducts(products.filter((p) => p.id !== product.id));
-      toast({ title: 'تم الحذف', description: `تم حذف المنتج "${product.trade_name}" بنجاح` });
+      toast({ title: 'تم الحذف', description: `تم حذف الصنف "${product.trade_name}" بنجاح` });
     }
   };
 
@@ -44,7 +44,7 @@ export default function Products() {
             : p
         )
       );
-      toast({ title: 'تم التحديث', description: 'تم تحديث بيانات المنتج بنجاح' });
+      toast({ title: 'تم التحديث', description: 'تم تحديث بيانات الصنف بنجاح' });
     } else {
       const newProduct: Product = {
         id: String(Date.now()),
@@ -57,11 +57,15 @@ export default function Products() {
         expiry_date: productData.expiry_date || '',
         min_stock: productData.min_stock || 10,
         category: productData.category || '',
+        packaging_type: productData.packaging_type || 'علبة',
+        units_per_package: productData.units_per_package || 1,
+        has_expiry: productData.has_expiry ?? true,
+        image_url: productData.image_url,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       };
       setProducts([...products, newProduct]);
-      toast({ title: 'تمت الإضافة', description: 'تم إضافة المنتج الجديد بنجاح' });
+      toast({ title: 'تمت الإضافة', description: 'تم إضافة الصنف الجديد بنجاح' });
     }
     setIsModalOpen(false);
     setSelectedProduct(null);
@@ -73,25 +77,25 @@ export default function Products() {
   };
 
   return (
-    <MainLayout title="إدارة المنتجات">
+    <MainLayout title="بطاقة صنف">
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between animate-fade-in">
         <div className="flex flex-1 gap-3">
           <div className="relative flex-1 max-w-md">
             <Search className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input placeholder="بحث بالاسم أو الباركود أو التصنيف..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="pr-9 input-focus" />
+            <Input placeholder="بحث بالاسم أو الكود أو التصنيف..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="pr-9 input-focus" />
           </div>
           <Button variant="outline" size="icon"><Filter className="h-4 w-4" /></Button>
         </div>
         <div className="flex gap-3">
           <Button variant="outline" className="gap-2"><Download className="h-4 w-4" />تصدير</Button>
           <Button variant="outline" className="gap-2"><Upload className="h-4 w-4" />استيراد</Button>
-          <Button onClick={handleAddNew} className="gap-2"><Plus className="h-4 w-4" />إضافة منتج</Button>
+          <Button onClick={handleAddNew} className="gap-2"><Plus className="h-4 w-4" />إضافة صنف</Button>
         </div>
       </div>
 
       <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-4 animate-fade-in" style={{ animationDelay: '0.1s' }}>
         <div className="rounded-lg bg-card p-4 shadow-card">
-          <p className="text-sm text-muted-foreground">إجمالي المنتجات</p>
+          <p className="text-sm text-muted-foreground">إجمالي الأصناف</p>
           <p className="text-2xl font-bold text-card-foreground">{products.length}</p>
         </div>
         <div className="rounded-lg bg-card p-4 shadow-card">
@@ -102,6 +106,7 @@ export default function Products() {
           <p className="text-sm text-muted-foreground">قريبة الانتهاء</p>
           <p className="text-2xl font-bold text-warning">
             {products.filter((p) => {
+              if (!p.has_expiry) return false;
               const expiryDate = new Date(p.expiry_date);
               const threeMonthsFromNow = new Date();
               threeMonthsFromNow.setMonth(threeMonthsFromNow.getMonth() + 3);
@@ -120,7 +125,7 @@ export default function Products() {
       </div>
 
       {filteredProducts.length === 0 && (
-        <div className="mt-8 text-center"><p className="text-muted-foreground">لا توجد منتجات مطابقة للبحث</p></div>
+        <div className="mt-8 text-center"><p className="text-muted-foreground">لا توجد أصناف مطابقة للبحث</p></div>
       )}
 
       <ProductModal isOpen={isModalOpen} onClose={() => { setIsModalOpen(false); setSelectedProduct(null); }} onSave={handleSave} product={selectedProduct} />

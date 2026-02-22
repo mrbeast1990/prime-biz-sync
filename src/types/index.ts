@@ -10,6 +10,10 @@ export interface Product {
   expiry_date: string;
   min_stock: number;
   category: string;
+  packaging_type: string;
+  units_per_package: number;
+  has_expiry: boolean;
+  image_url?: string;
   is_active?: boolean;
   created_at: string;
   updated_at: string;
@@ -84,7 +88,10 @@ export interface CartItem {
   product: Product;
   quantity: number;
   total: number;
+  unit_type?: 'package' | 'unit';
 }
+
+export type SaleMode = 'cash' | 'card' | 'credit' | 'return' | 'damage';
 
 // Insurance Customer
 export interface InsuranceCustomer {

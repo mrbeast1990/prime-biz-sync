@@ -26,7 +26,7 @@ const navItems: NavItem[] = [
   { title: 'لوحة التحكم', href: '/', icon: LayoutDashboard },
   { title: 'البيع للتأمين', href: '/insurance-pos', icon: Shield },
   { title: 'البيع السريع', href: '/pos', icon: Zap },
-  { title: 'المنتجات', href: '/products', icon: Package },
+  { title: 'بطاقة صنف', href: '/products', icon: Package },
   { title: 'المشتريات', href: '/purchases', icon: Truck },
   { title: 'الحسابات', href: '/accounts', icon: Users },
   { title: 'الخزينة', href: '/treasury', icon: Wallet },

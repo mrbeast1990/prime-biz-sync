@@ -125,6 +125,7 @@ export type Database = {
           quantity: number
           total: number
           unit_price: number
+          unit_type: string | null
         }
         Insert: {
           created_at?: string
@@ -135,6 +136,7 @@ export type Database = {
           quantity?: number
           total?: number
           unit_price?: number
+          unit_type?: string | null
         }
         Update: {
           created_at?: string
@@ -145,6 +147,7 @@ export type Database = {
           quantity?: number
           total?: number
           unit_price?: number
+          unit_type?: string | null
         }
         Relationships: [
           {
@@ -273,13 +276,17 @@ export type Database = {
           cost_price: number
           created_at: string
           expiry_date: string | null
+          has_expiry: boolean | null
           id: string
+          image_url: string | null
           is_active: boolean
           min_stock: number
+          packaging_type: string | null
           sale_price: number
           scientific_name: string | null
           stock_quantity: number
           trade_name: string
+          units_per_package: number | null
           updated_at: string
         }
         Insert: {
@@ -288,13 +295,17 @@ export type Database = {
           cost_price?: number
           created_at?: string
           expiry_date?: string | null
+          has_expiry?: boolean | null
           id?: string
+          image_url?: string | null
           is_active?: boolean
           min_stock?: number
+          packaging_type?: string | null
           sale_price?: number
           scientific_name?: string | null
           stock_quantity?: number
           trade_name: string
+          units_per_package?: number | null
           updated_at?: string
         }
         Update: {
@@ -303,13 +314,17 @@ export type Database = {
           cost_price?: number
           created_at?: string
           expiry_date?: string | null
+          has_expiry?: boolean | null
           id?: string
+          image_url?: string | null
           is_active?: boolean
           min_stock?: number
+          packaging_type?: string | null
           sale_price?: number
           scientific_name?: string | null
           stock_quantity?: number
           trade_name?: string
+          units_per_package?: number | null
           updated_at?: string
         }
         Relationships: []
