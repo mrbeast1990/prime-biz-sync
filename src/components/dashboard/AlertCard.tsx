@@ -47,22 +47,22 @@ export function AlertCard({ title, type, products }: AlertCardProps) {
               className="flex items-center justify-between rounded-lg bg-muted/50 p-3 transition-colors hover:bg-muted"
             >
               <div>
-                <p className="font-medium text-card-foreground">{product.tradeName}</p>
-                <p className="text-xs text-muted-foreground">{product.scientificName}</p>
+                <p className="font-medium text-card-foreground">{product.trade_name}</p>
+                <p className="text-xs text-muted-foreground">{product.scientific_name}</p>
               </div>
               <div className="text-left">
                 {isLowStock ? (
                   <span
                     className={cn(
                       'inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium',
-                      product.stockQuantity <= 5 ? 'bg-destructive/10 text-destructive' : 'bg-warning/10 text-warning'
+                      product.stock_quantity <= 5 ? 'bg-destructive/10 text-destructive' : 'bg-warning/10 text-warning'
                     )}
                   >
-                    {product.stockQuantity} قطعة
+                    {product.stock_quantity} قطعة
                   </span>
                 ) : (
                   <span className="inline-flex items-center rounded-full bg-warning/10 px-2.5 py-1 text-xs font-medium text-warning">
-                    {new Date(product.expiryDate).toLocaleDateString('ar-SA')}
+                    {new Date(product.expiry_date).toLocaleDateString('ar-SA')}
                   </span>
                 )}
               </div>

@@ -37,17 +37,17 @@ export function RecentTransactions({ invoices }: RecentTransactionsProps) {
                 <div
                   className={cn(
                     'flex h-10 w-10 items-center justify-center rounded-full',
-                    invoice.type === 'sale' ? 'bg-success/10' : 'bg-info/10'
+                    invoice.invoice_type === 'sale' ? 'bg-success/10' : 'bg-info/10'
                   )}
                 >
-                  {invoice.type === 'sale' ? (
+                  {invoice.invoice_type === 'sale' ? (
                     <ArrowUpRight className="h-5 w-5 text-success" />
                   ) : (
                     <ArrowDownLeft className="h-5 w-5 text-info" />
                   )}
                 </div>
                 <div>
-                  <p className="font-medium text-card-foreground">{invoice.contactName}</p>
+                  <p className="font-medium text-card-foreground">{invoice.contact_name}</p>
                   <p className="text-xs text-muted-foreground">
                     {invoice.id} • {invoice.items.length} منتج
                   </p>
@@ -57,13 +57,13 @@ export function RecentTransactions({ invoices }: RecentTransactionsProps) {
                 <p
                   className={cn(
                     'font-bold tabular-nums',
-                    invoice.type === 'sale' ? 'text-success' : 'text-info'
+                    invoice.invoice_type === 'sale' ? 'text-success' : 'text-info'
                   )}
                 >
-                  {invoice.type === 'sale' ? '+' : '-'}{invoice.total.toFixed(2)} ر.س
+                  {invoice.invoice_type === 'sale' ? '+' : '-'}{invoice.total.toFixed(2)} ر.س
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  {new Date(invoice.createdAt).toLocaleTimeString('ar-SA', {
+                  {new Date(invoice.created_at).toLocaleTimeString('ar-SA', {
                     hour: '2-digit',
                     minute: '2-digit',
                   })}

@@ -2,64 +2,71 @@
 export interface Product {
   id: string;
   barcode: string;
-  tradeName: string;
-  scientificName: string;
-  stockQuantity: number;
-  costPrice: number;
-  salePrice: number;
-  expiryDate: string;
-  minStock: number;
+  trade_name: string;
+  scientific_name: string;
+  stock_quantity: number;
+  cost_price: number;
+  sale_price: number;
+  expiry_date: string;
+  min_stock: number;
   category: string;
-  createdAt: string;
-  updatedAt: string;
+  is_active?: boolean;
+  created_at: string;
+  updated_at: string;
 }
 
 // Contact (Customer or Supplier)
 export interface Contact {
   id: string;
   name: string;
-  type: 'customer' | 'supplier';
+  contact_type: 'customer' | 'supplier';
   phone: string;
   email: string;
   address: string;
   balance: number;
-  createdAt: string;
+  created_at: string;
+  updated_at?: string;
 }
 
 // Invoice Header
 export interface Invoice {
   id: string;
-  type: 'sale' | 'purchase';
-  contactId: string;
-  contactName: string;
-  date: string;
+  invoice_number?: string;
+  invoice_type: 'sale' | 'purchase';
+  contact_id: string;
+  contact_name: string;
+  invoice_date: string;
   total: number;
   paid: number;
   status: 'pending' | 'completed' | 'cancelled';
+  payment_method?: string;
   items: InvoiceItem[];
-  createdAt: string;
+  created_at: string;
+  updated_at?: string;
 }
 
 // Invoice Line Item
 export interface InvoiceItem {
   id: string;
-  productId: string;
-  productName: string;
+  invoice_id?: string;
+  product_id: string;
+  product_name: string;
   quantity: number;
-  unitPrice: number;
+  unit_price: number;
   total: number;
 }
 
 // Ledger Entry
 export interface LedgerEntry {
   id: string;
-  date: string;
+  entry_date: string;
   description: string;
-  type: 'income' | 'expense';
+  entry_type: 'income' | 'expense';
   amount: number;
-  balance: number;
-  referenceId?: string;
-  referenceType?: 'invoice' | 'payment' | 'adjustment';
+  running_balance: number;
+  reference_id?: string;
+  reference_type?: string;
+  contact_id?: string;
 }
 
 // Dashboard Stats
@@ -83,27 +90,28 @@ export interface CartItem {
 export interface InsuranceCustomer {
   id: string;
   name: string;
-  cardNumber: string;
+  card_number: string;
   phone: string;
   balance: number;
-  createdAt: string;
+  created_at: string;
+  updated_at?: string;
 }
 
 // Insurance Sale
 export interface InsuranceSale {
   id: string;
-  customerId: string;
-  customerName: string;
+  customer_id: string;
+  customer_name: string;
   items: CartItem[];
   total: number;
-  date: string;
+  sale_date: string;
 }
 
 // Purchase Order
 export interface PurchaseOrder {
   id: string;
-  supplierId: string;
-  supplierName: string;
+  supplier_id: string;
+  supplier_name: string;
   items: InvoiceItem[];
   total: number;
   date: string;
@@ -113,13 +121,13 @@ export interface PurchaseOrder {
 // Treasury Entry
 export interface TreasuryEntry {
   id: string;
-  date: string;
-  type: 'income' | 'expense' | 'deposit' | 'withdrawal';
+  entry_date: string;
+  entry_type: 'income' | 'expense' | 'deposit' | 'withdrawal';
   category: 'sales' | 'insurance_sales' | 'purchases' | 'manual';
   description: string;
   amount: number;
-  balance: number;
-  referenceId?: string;
+  running_balance: number;
+  reference_id?: string;
 }
 
 // Pharmacy Settings
