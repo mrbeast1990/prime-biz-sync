@@ -1,117 +1,111 @@
 
 
-# خطة تفعيل Supabase وإنشاء قاعدة البيانات
+# خطة تعديل بطاقة الصنف وأوضاع البيع
 
-## ملخص
-تحويل المشروع من بيانات وهمية (mock data) إلى قاعدة بيانات Supabase حقيقية مع تحويل الـ schema من SQL Server إلى PostgreSQL.
+## ملخص التغييرات
+
+تغييران رئيسيان:
+1. إعادة تصميم شاشة المنتجات لتصبح "بطاقة صنف" مع حقول جديدة (نوع التعبئة، عدد الوحدات، خضوع للصلاحية، صورة)
+2. إضافة أوضاع متعددة للبيع في شاشة POS (نقدا، بطاقة، آجل، استرجاع، إتلاف)
 
 ---
 
-## المرحلة 1: تفعيل Supabase Cloud
+## المرحلة 1: تعديل قاعدة البيانات
 
-تفعيل اتصال Lovable Cloud مع Supabase لإنشاء قاعدة بيانات تلقائيا.
+إضافة أعمدة جديدة لجدول products:
 
-## المرحلة 2: إنشاء جداول قاعدة البيانات (Migration)
+| العمود | النوع | الوصف |
+|---|---|---|
+| packaging_type | TEXT | نوع التعبئة (علبة، شريط، قطعة...) |
+| units_per_package | INTEGER | عدد الوحدات في العبوة |
+| has_expiry | BOOLEAN | هل الصنف خاضع لصلاحية |
+| image_url | TEXT | رابط صورة الصنف (اختياري) |
 
-تحويل جميع الجداول من T-SQL إلى PostgreSQL مع التعديلات التالية:
+وكذلك إضافة عمود `unit_type` في جدول `invoice_items` لتسجيل هل تم البيع بالعلبة أو بالشريط.
 
-| SQL Server | PostgreSQL |
+تعديل جدول `invoices` لإضافة أنواع جديدة: `return` و `damage` بالإضافة للأنواع الحالية.
+
+## المرحلة 2: تحديث الأنواع (Types)
+
+تحديث `src/types/index.ts`:
+- إضافة الحقول الجديدة لـ `Product`: `packaging_type`, `units_per_package`, `has_expiry`, `image_url`
+- تحديث `Invoice.invoice_type` ليشمل: `'sale' | 'purchase' | 'return' | 'damage'`
+- إضافة `unit_type` لـ `CartItem`
+
+## المرحلة 3: تعديل بطاقة الصنف (شاشة المنتجات)
+
+### تغيير الاسم
+- في الشريط الجانبي: "المنتجات" تصبح "بطاقة صنف"
+- عنوان الصفحة: "إدارة المنتجات" تصبح "بطاقة صنف"
+
+### تعديل نموذج إضافة/تعديل الصنف (ProductModal)
+ترتيب الحقول الجديد:
+1. **الكود** - إجباري، زر "توليد كود" يولد 4 أرقام عشوائية
+2. **اسم الصنف** (trade_name)
+3. **الاسم العلمي** (scientific_name)
+4. **نوع التعبئة** - قائمة اختيار (علبة، شريط، قطعة، أنبوب، زجاجة)
+5. **عدد الوحدات في العبوة** - رقم (مثلا 1 = شريط واحد، 2 = شريطان)
+6. **خاضع لصلاحية** - مفتاح تشغيل/إيقاف (Switch)
+7. **تاريخ الانتهاء** - يظهر فقط إذا كان خاضع للصلاحية
+8. **صورة الصنف** - زر رفع صورة اختياري
+9. **الحقول المالية** - سعر التكلفة، سعر البيع، الكمية، الحد الأدنى
+10. **حفظ**
+
+### تعديل جدول العرض (ProductTable)
+- إضافة عمود نوع التعبئة
+- إظهار صورة مصغرة إن وجدت
+
+## المرحلة 4: تعديل شاشة البيع السريع (POS)
+
+استبدال زري "نقدا" و "بطاقة" بقائمة أوضاع متعددة:
+
+| الوضع | السلوك |
 |---|---|
-| UNIQUEIDENTIFIER + NEWID() | UUID + gen_random_uuid() |
-| NVARCHAR(n) | TEXT |
-| BIT | BOOLEAN |
-| DATETIME2 | TIMESTAMPTZ |
-| DECIMAL(18,2) | NUMERIC(18,2) |
-| GETDATE() | now() |
+| **نقدا** | بيع نقدي مباشر (السلوك الحالي) |
+| **بطاقة** | بيع ببطاقة دفع |
+| **مبيعات آجل** | يطلب اسم الزبون، يسجل على حسابه |
+| **استرجاع** | إرجاع أصناف للمخزون |
+| **إتلاف** | خصم أصناف تالفة من المخزون |
 
-### الجداول المطلوبة (بالترتيب):
+التصميم: أزرار متجاورة أسفل السلة، عند اختيار "مبيعات آجل" يظهر حقل لاختيار/إدخال اسم الزبون.
 
-1. **products** - المنتجات
-2. **contacts** - جهات الاتصال (زبائن + موردين)
-3. **insurance_customers** - عملاء التأمين
-4. **invoices** - الفواتير (بيع/شراء)
-5. **invoice_items** - تفاصيل الفواتير
-6. **insurance_sales** - مبيعات التأمين
-7. **ledger** - دفتر الحسابات
-8. **treasury** - الخزينة
-9. **settings** - إعدادات النظام
+## المرحلة 5: تحديث البيانات الوهمية
 
-ملاحظة: جدول المستخدمين (users) سيعتمد على نظام Supabase Auth المدمج مع جدول profiles إضافي للصلاحيات.
-
-### دوال مساعدة للصلاحيات:
-- `get_user_role()` - إرجاع دور المستخدم الحالي
-- `is_admin()` - هل المستخدم مدير؟
-- `is_manager_or_admin()` - هل مدير أو مشرف؟
-
-### سياسات أمان RLS:
-- المنتجات وجهات الاتصال: قراءة لجميع المسجلين
-- الفواتير: إنشاء للجميع، حذف للمدير فقط
-- الخزينة ودفتر الحسابات: المدير والمشرف فقط
-- الإعدادات والمستخدمين: المدير فقط
-
-## المرحلة 3: إنشاء Supabase Client
-
-إنشاء ملف `src/integrations/supabase/client.ts` لتهيئة الاتصال.
-
-## المرحلة 4: تحديث Types
-
-تحديث `src/types/index.ts` ليتوافق مع أسماء أعمدة PostgreSQL (snake_case):
-
-- `tradeName` يصبح `trade_name`
-- `stockQuantity` يصبح `stock_quantity`
-- `costPrice` يصبح `cost_price`
-- `salePrice` يصبح `sale_price`
-- `expiryDate` يصبح `expiry_date`
-- `minStock` يصبح `min_stock`
-- `createdAt` يصبح `created_at`
-- `updatedAt` يصبح `updated_at`
-- `contactType` يصبح `contact_type`
-
-وسيتم أيضا إنشاء ملف types تلقائي من Supabase في `src/integrations/supabase/types.ts`.
-
-## المرحلة 5: تحديث جميع الصفحات
-
-تحديث جميع الملفات التي تستخدم الـ types القديمة (camelCase) لتتوافق مع الأسماء الجديدة (snake_case):
-- `src/pages/Products.tsx`
-- `src/pages/POS.tsx`
-- `src/pages/InsurancePOS.tsx`
-- `src/pages/Purchases.tsx`
-- `src/pages/Accounts.tsx`
-- `src/pages/Dashboard.tsx`
-- `src/pages/Treasury.tsx`
-- `src/pages/Reports.tsx`
-- `src/pages/InsuranceCustomers.tsx`
-- `src/components/products/ProductTable.tsx`
-- `src/components/products/ProductModal.tsx`
-- `src/components/accounts/AccountDetailsDialog.tsx`
-- `src/components/insurance/InsuranceCustomerDialog.tsx`
-- `src/components/purchases/SupplierModal.tsx`
-- `src/components/dashboard/AlertCard.tsx`
-- `src/components/dashboard/RecentTransactions.tsx`
-- `src/data/mockData.ts`
+تحديث `mockData.ts` لإضافة الحقول الجديدة للمنتجات الحالية.
 
 ---
 
-## التفاصيل التقنية
+## الملفات المتأثرة
 
-### الملفات الجديدة
+### ملفات جديدة
+- لا توجد ملفات جديدة
+
+### ملفات معدلة
+- `supabase/migrations/` - migration جديد لإضافة الأعمدة
+- `src/types/index.ts` - إضافة الحقول الجديدة
+- `src/data/mockData.ts` - تحديث البيانات الوهمية
+- `src/components/layout/Sidebar.tsx` - تغيير اسم "المنتجات" إلى "بطاقة صنف"
+- `src/pages/Products.tsx` - تغيير العنوان وإضافة منطق الكود التلقائي
+- `src/components/products/ProductModal.tsx` - إعادة تصميم النموذج بالكامل
+- `src/components/products/ProductTable.tsx` - إضافة أعمدة جديدة
+- `src/pages/POS.tsx` - إضافة أوضاع البيع الخمسة
+
+### التفاصيل التقنية
+
+**توليد الكود العشوائي:**
 ```text
-src/integrations/supabase/client.ts   -- Supabase client
-src/integrations/supabase/types.ts    -- أنواع البيانات التلقائية
+Math.floor(1000 + Math.random() * 9000).toString()
 ```
+يولد رقم من 4 خانات بين 1000 و 9999.
 
-### الملفات المعدلة
+**أوضاع البيع في POS:**
 ```text
-src/types/index.ts                    -- تحديث الأسماء لـ snake_case
-src/data/mockData.ts                  -- تحديث الأسماء
-جميع الصفحات والمكونات               -- تحديث استخدام الأسماء الجديدة
+type SaleMode = 'cash' | 'card' | 'credit' | 'return' | 'damage'
 ```
+- وضع credit يظهر حقل اختيار الزبون من جهات الاتصال
+- وضع return يعكس العملية (يضيف للمخزون بدل الخصم)
+- وضع damage يخصم من المخزون بدون تسجيل مبيعات
 
-### ملاحظة مهمة
-في هذه المرحلة سيتم فقط:
-1. إنشاء الجداول والاتصال
-2. تحديث الـ Types
-3. تحديث أسماء الحقول في جميع الملفات
-
-ربط الصفحات فعليا بقاعدة البيانات (استبدال mock data بـ Supabase queries) سيكون في مرحلة لاحقة حتى لا يتعطل التطبيق.
+**البيع بالوحدة الفرعية:**
+عند إضافة صنف للسلة، يمكن اختيار البيع بالعلبة كاملة أو بالشريط الواحد. السعر يحسب تلقائيا بقسمة سعر العلبة على عدد الأشرطة.
 
