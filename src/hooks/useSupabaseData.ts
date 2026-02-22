@@ -180,12 +180,43 @@ export function useInsuranceSales() {
 export function useCreateInsuranceSale() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (sale: { customer_id: string; customer_name: string; total: number }) => {
-      const { data, error } = await supabase.from('insurance_sales').insert(sale).select().single();
+    mutationFn: async (sale: { customer_id: string; customer_name: string; total: number; items: { product_id: string; product_name: string; quantity: number; unit_price: number; total: number }[] }) => {
+      const { items, ...saleData } = sale;
+      const { data, error } = await supabase.from('insurance_sales').insert(saleData).select().single();
       if (error) throw error;
+
+      if (items.length > 0) {
+        const itemsWithSaleId = items.map(item => ({
+          sale_id: data.id,
+          product_id: item.product_id,
+          product_name: item.product_name,
+          quantity: item.quantity,
+          unit_price: item.unit_price,
+          total: item.total,
+        }));
+        const { error: itemsError } = await supabase.from('insurance_sale_items' as any).insert(itemsWithSaleId);
+        if (itemsError) throw itemsError;
+      }
+
       return data;
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['insurance_sales'] }),
+  });
+}
+
+export function useInsuranceSaleItems(saleId?: string) {
+  return useQuery({
+    queryKey: ['insurance_sale_items', saleId],
+    queryFn: async () => {
+      if (!saleId) return [];
+      const { data, error } = await supabase
+        .from('insurance_sale_items' as any)
+        .select('*')
+        .eq('sale_id', saleId);
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!saleId,
   });
 }
 

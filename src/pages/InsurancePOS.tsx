@@ -83,7 +83,14 @@ export default function InsurancePOS() {
 
   const handleConfirmSale = async (customer: InsuranceCustomer) => {
     try {
-      await createSale.mutateAsync({ customer_id: customer.id, customer_name: customer.name, total });
+      const saleItems = cart.map(item => ({
+        product_id: item.product.id,
+        product_name: item.product.trade_name,
+        quantity: item.quantity,
+        unit_price: item.product.sale_price,
+        total: item.total,
+      }));
+      await createSale.mutateAsync({ customer_id: customer.id, customer_name: customer.name, total, items: saleItems });
       for (const item of cart) {
         await updateStock.mutateAsync({ id: item.product.id, delta: -item.quantity });
       }

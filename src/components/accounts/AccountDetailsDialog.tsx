@@ -5,10 +5,14 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Contact, InsuranceCustomer } from '@/types';
-import { Edit, FileText, Save } from 'lucide-react';
+import { Edit, FileText, Save, ChevronDown } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
-import { useInvoices, useInsuranceSales } from '@/hooks/useSupabaseData';
+import { useInvoices, useInsuranceSales, useInvoiceItems, useInsuranceSaleItems } from '@/hooks/useSupabaseData';
+import { supabase } from '@/integrations/supabase/client';
+import { useQuery } from '@tanstack/react-query';
+import { cn } from '@/lib/utils';
 
 interface AccountDetailsDialogProps {
   isOpen: boolean;
@@ -18,11 +22,48 @@ interface AccountDetailsDialogProps {
   type: 'customer' | 'supplier' | 'insurance';
 }
 
+function TransactionItemsRow({ transactionId, type }: { transactionId: string; type: 'invoice' | 'insurance' }) {
+  const { data: invoiceItems = [] } = useInvoiceItems(type === 'invoice' ? transactionId : undefined);
+  const { data: insuranceItems = [] } = useInsuranceSaleItems(type === 'insurance' ? transactionId : undefined);
+
+  const items = type === 'invoice' ? invoiceItems : insuranceItems;
+
+  if (items.length === 0) {
+    return <p className="text-sm text-muted-foreground py-2 text-center">لا توجد تفاصيل أصناف</p>;
+  }
+
+  return (
+    <div className="rounded-md border bg-muted/30 overflow-hidden">
+      <Table>
+        <TableHeader>
+          <TableRow className="text-xs">
+            <TableHead className="text-right py-1.5">الصنف</TableHead>
+            <TableHead className="text-right py-1.5">الكمية</TableHead>
+            <TableHead className="text-right py-1.5">السعر</TableHead>
+            <TableHead className="text-right py-1.5">الإجمالي</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {items.map((item: any) => (
+            <TableRow key={item.id} className="text-xs">
+              <TableCell className="py-1.5">{item.product_name}</TableCell>
+              <TableCell className="py-1.5 tabular-nums">{item.quantity}</TableCell>
+              <TableCell className="py-1.5 tabular-nums">{Number(item.unit_price).toFixed(2)}</TableCell>
+              <TableCell className="py-1.5 tabular-nums">{Number(item.total).toFixed(2)} د.ل</TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </div>
+  );
+}
+
 export function AccountDetailsDialog({ isOpen, onClose, contact, insuranceCustomer, type }: AccountDetailsDialogProps) {
   const { data: invoices = [] } = useInvoices();
   const { data: insuranceSales = [] } = useInsuranceSales();
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({ name: '', phone: '', address: '', card_number: '' });
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const startEdit = () => {
     if (type === 'insurance' && insuranceCustomer) {
@@ -53,6 +94,10 @@ export function AccountDetailsDialog({ isOpen, onClose, contact, insuranceCustom
   const transactions = getTransactions();
   const totalAmount = transactions.reduce((sum, t) => sum + Number(t.total), 0);
 
+  const toggleExpand = (id: string) => {
+    setExpandedId(prev => prev === id ? null : id);
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-2xl max-h-[85vh] overflow-y-auto">
@@ -76,26 +121,35 @@ export function AccountDetailsDialog({ isOpen, onClose, contact, insuranceCustom
                 <p className="text-sm text-muted-foreground">عدد العمليات</p>
               </div>
               <div className="rounded-lg bg-success/10 p-4 text-center">
-                <p className="text-2xl font-bold text-success">{totalAmount.toFixed(2)} ر.س</p>
+                <p className="text-2xl font-bold text-success">{totalAmount.toFixed(2)} د.ل</p>
                 <p className="text-sm text-muted-foreground">الإجمالي</p>
               </div>
             </div>
 
             {transactions.length > 0 ? (
-              <div className="rounded-lg border overflow-hidden">
-                <Table>
-                  <TableHeader><TableRow>
-                    <TableHead className="text-right">التاريخ</TableHead><TableHead className="text-right">المبلغ</TableHead>
-                  </TableRow></TableHeader>
-                  <TableBody>
-                    {transactions.map((t: any) => (
-                      <TableRow key={t.id}>
-                        <TableCell>{new Date(t.invoice_date || t.sale_date).toLocaleDateString('ar-SA')}</TableCell>
-                        <TableCell className="tabular-nums font-medium">{Number(t.total).toFixed(2)} ر.س</TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+              <div className="space-y-2">
+                {transactions.map((t: any) => (
+                  <div key={t.id} className="rounded-lg border overflow-hidden">
+                    <button
+                      onClick={() => toggleExpand(t.id)}
+                      className="w-full flex items-center justify-between p-3 hover:bg-muted/50 transition-colors"
+                    >
+                      <div className="flex items-center gap-3">
+                        <ChevronDown className={cn("h-4 w-4 text-muted-foreground transition-transform", expandedId === t.id && "rotate-180")} />
+                        <span className="text-sm">{new Date(t.invoice_date || t.sale_date).toLocaleDateString('ar-SA')}</span>
+                      </div>
+                      <span className="tabular-nums font-medium text-sm">{Number(t.total).toFixed(2)} د.ل</span>
+                    </button>
+                    {expandedId === t.id && (
+                      <div className="px-3 pb-3">
+                        <TransactionItemsRow
+                          transactionId={t.id}
+                          type={type === 'insurance' ? 'insurance' : 'invoice'}
+                        />
+                      </div>
+                    )}
+                  </div>
+                ))}
               </div>
             ) : (
               <p className="text-center text-muted-foreground py-8">لا توجد حركات مسجلة</p>
