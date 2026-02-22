@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Contact } from '@/types';
-import { mockContacts } from '@/data/mockData';
+import { useCreateContact } from '@/hooks/useSupabaseData';
 
 interface SupplierModalProps {
   isOpen: boolean;
@@ -16,22 +16,22 @@ export function SupplierModal({ isOpen, onClose, onSave }: SupplierModalProps) {
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [address, setAddress] = useState('');
+  const createContact = useCreateContact();
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!name.trim()) return;
-    const newSupplier: Contact = {
-      id: Date.now().toString(),
-      name,
-      contact_type: 'supplier',
-      phone,
-      email: '',
-      address,
-      balance: 0,
-      created_at: new Date().toISOString().split('T')[0],
-    };
-    mockContacts.push(newSupplier);
-    onSave(newSupplier);
-    setName(''); setPhone(''); setAddress('');
+    try {
+      const supplier = await createContact.mutateAsync({
+        name,
+        contact_type: 'supplier',
+        phone,
+        address,
+      });
+      onSave(supplier);
+      setName(''); setPhone(''); setAddress('');
+    } catch {
+      // handled by mutation
+    }
   };
 
   return (
@@ -45,7 +45,7 @@ export function SupplierModal({ isOpen, onClose, onSave }: SupplierModalProps) {
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>إلغاء</Button>
-          <Button onClick={handleSave} disabled={!name.trim()}>حفظ</Button>
+          <Button onClick={handleSave} disabled={!name.trim() || createContact.isPending}>حفظ</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

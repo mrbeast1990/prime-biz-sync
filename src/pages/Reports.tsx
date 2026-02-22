@@ -6,26 +6,24 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import { mockInvoices, mockInsuranceSales, mockPurchaseOrders, mockProducts } from '@/data/mockData';
-import { BarChart3, ShoppingCart, TrendingUp, Package } from 'lucide-react';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Cell } from 'recharts';
+import { BarChart3, ShoppingCart, TrendingUp, Package, Loader2 } from 'lucide-react';
+import { useProducts, useInvoices, useInsuranceSales } from '@/hooks/useSupabaseData';
 
 const COLORS = ['hsl(217, 91%, 50%)', 'hsl(142, 71%, 45%)', 'hsl(38, 92%, 50%)', 'hsl(0, 84%, 60%)', 'hsl(199, 89%, 48%)'];
 
 export default function Reports() {
+  const { data: products = [], isLoading } = useProducts();
+  const { data: invoices = [] } = useInvoices();
+  const { data: insuranceSales = [] } = useInsuranceSales();
+
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
 
-  const salesTotal = mockInvoices.filter(i => i.invoice_type === 'sale').reduce((s, i) => s + i.total, 0);
-  const insuranceSalesTotal = mockInsuranceSales.reduce((s, i) => s + i.total, 0);
-  const purchasesTotal = mockPurchaseOrders.reduce((s, o) => s + o.total, 0);
-  const costOfGoods = mockInvoices.filter(i => i.invoice_type === 'sale').reduce((sum, inv) => {
-    return sum + inv.items.reduce((iSum, item) => {
-      const product = mockProducts.find(p => p.id === item.product_id);
-      return iSum + (product ? product.cost_price * item.quantity : 0);
-    }, 0);
-  }, 0);
-  const profit = salesTotal + insuranceSalesTotal - costOfGoods;
+  const salesTotal = invoices.filter(i => i.invoice_type === 'sale').reduce((s, i) => s + Number(i.total), 0);
+  const insuranceSalesTotal = insuranceSales.reduce((s, i) => s + Number(i.total), 0);
+  const purchasesTotal = invoices.filter(i => i.invoice_type === 'purchase').reduce((s, i) => s + Number(i.total), 0);
+  const profit = salesTotal + insuranceSalesTotal - purchasesTotal;
 
   const salesChartData = [
     { name: 'المبيعات النقدية', value: salesTotal },
@@ -34,17 +32,11 @@ export default function Reports() {
   ];
 
   const chartConfig = { value: { label: 'القيمة', color: 'hsl(217, 91%, 50%)' } };
+  const lowStock = products.filter(p => p.stock_quantity <= p.min_stock);
 
-  const productSales: Record<string, { name: string; qty: number; total: number }> = {};
-  mockInvoices.filter(i => i.invoice_type === 'sale').forEach(inv => {
-    inv.items.forEach(item => {
-      if (!productSales[item.product_id]) productSales[item.product_id] = { name: item.product_name, qty: 0, total: 0 };
-      productSales[item.product_id].qty += item.quantity;
-      productSales[item.product_id].total += item.total;
-    });
-  });
-  const topProducts = Object.values(productSales).sort((a, b) => b.total - a.total);
-  const lowStock = mockProducts.filter(p => p.stock_quantity <= p.min_stock);
+  if (isLoading) {
+    return <MainLayout title="التقارير"><div className="flex items-center justify-center h-64"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div></MainLayout>;
+  }
 
   return (
     <MainLayout title="التقارير">
@@ -64,7 +56,6 @@ export default function Reports() {
         <Tabs defaultValue="sales" dir="rtl">
           <TabsList>
             <TabsTrigger value="sales">المبيعات</TabsTrigger>
-            <TabsTrigger value="top-products">الأكثر مبيعاً</TabsTrigger>
             <TabsTrigger value="inventory">المخزون</TabsTrigger>
           </TabsList>
 
@@ -86,21 +77,6 @@ export default function Reports() {
             </Card>
           </TabsContent>
 
-          <TabsContent value="top-products">
-            <Card className="border-0 shadow-card">
-              <CardHeader><CardTitle>المنتجات الأكثر مبيعاً</CardTitle></CardHeader>
-              <CardContent>
-                <Table>
-                  <TableHeader><TableRow><TableHead className="text-right">المنتج</TableHead><TableHead className="text-right">الكمية المباعة</TableHead><TableHead className="text-right">الإجمالي</TableHead></TableRow></TableHeader>
-                  <TableBody>
-                    {topProducts.map((p, i) => <TableRow key={i}><TableCell className="font-medium">{p.name}</TableCell><TableCell>{p.qty}</TableCell><TableCell className="tabular-nums">{p.total.toFixed(2)} ر.س</TableCell></TableRow>)}
-                    {topProducts.length === 0 && <TableRow><TableCell colSpan={3} className="text-center py-8 text-muted-foreground">لا توجد بيانات</TableCell></TableRow>}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
           <TabsContent value="inventory">
             <Card className="border-0 shadow-card">
               <CardHeader><CardTitle>حركة المخزون - منتجات بمخزون منخفض</CardTitle></CardHeader>
@@ -108,7 +84,7 @@ export default function Reports() {
                 <Table>
                   <TableHeader><TableRow><TableHead className="text-right">المنتج</TableHead><TableHead className="text-right">المخزون الحالي</TableHead><TableHead className="text-right">الحد الأدنى</TableHead><TableHead className="text-right">الحالة</TableHead></TableRow></TableHeader>
                   <TableBody>
-                    {mockProducts.map(p => (
+                    {products.map(p => (
                       <TableRow key={p.id}>
                         <TableCell className="font-medium">{p.trade_name}</TableCell>
                         <TableCell>{p.stock_quantity}</TableCell>

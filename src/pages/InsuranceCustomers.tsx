@@ -5,38 +5,44 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { Search, Edit, Users } from 'lucide-react';
-import { mockInsuranceCustomers, mockInsuranceSales } from '@/data/mockData';
+import { Search, Edit, Users, Loader2 } from 'lucide-react';
 import { InsuranceCustomer } from '@/types';
+import { useInsuranceCustomers, useInsuranceSales, useUpdateInsuranceCustomer } from '@/hooks/useSupabaseData';
 
 export default function InsuranceCustomers() {
+  const { data: customers = [], isLoading } = useInsuranceCustomers();
+  const { data: sales = [] } = useInsuranceSales();
+  const updateCustomer = useUpdateInsuranceCustomer();
+
   const [searchQuery, setSearchQuery] = useState('');
   const [editCustomer, setEditCustomer] = useState<InsuranceCustomer | null>(null);
   const [editForm, setEditForm] = useState({ name: '', card_number: '', phone: '' });
 
-  const filtered = mockInsuranceCustomers.filter(
-    (c) => c.name.includes(searchQuery) || c.card_number.includes(searchQuery) || c.phone.includes(searchQuery)
+  const filtered = customers.filter(
+    (c) => c.name.includes(searchQuery) || (c.card_number || '').includes(searchQuery) || (c.phone || '').includes(searchQuery)
   );
 
   const openEdit = (customer: InsuranceCustomer) => {
     setEditCustomer(customer);
-    setEditForm({ name: customer.name, card_number: customer.card_number, phone: customer.phone });
+    setEditForm({ name: customer.name, card_number: customer.card_number || '', phone: customer.phone || '' });
   };
 
-  const saveEdit = () => {
+  const saveEdit = async () => {
     if (!editCustomer) return;
-    const idx = mockInsuranceCustomers.findIndex((c) => c.id === editCustomer.id);
-    if (idx >= 0) {
-      mockInsuranceCustomers[idx] = { ...mockInsuranceCustomers[idx], ...editForm };
+    try {
+      await updateCustomer.mutateAsync({ id: editCustomer.id, ...editForm });
+      setEditCustomer(null);
+    } catch {
+      // error handled by mutation
     }
-    setEditCustomer(null);
   };
 
-  const getSalesCount = (customerId: string) =>
-    mockInsuranceSales.filter((s) => s.customer_id === customerId).length;
+  const getSalesCount = (customerId: string) => sales.filter((s) => s.customer_id === customerId).length;
+  const getTotalSpent = (customerId: string) => sales.filter((s) => s.customer_id === customerId).reduce((sum, s) => sum + Number(s.total), 0);
 
-  const getTotalSpent = (customerId: string) =>
-    mockInsuranceSales.filter((s) => s.customer_id === customerId).reduce((sum, s) => sum + s.total, 0);
+  if (isLoading) {
+    return <MainLayout title="عملاء التأمين"><div className="flex items-center justify-center h-64"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div></MainLayout>;
+  }
 
   return (
     <MainLayout title="عملاء التأمين">
@@ -44,7 +50,7 @@ export default function InsuranceCustomers() {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10"><Users className="h-5 w-5 text-primary" /></div>
-            <div><h2 className="text-xl font-bold text-foreground">عملاء التأمين</h2><p className="text-sm text-muted-foreground">{mockInsuranceCustomers.length} عميل</p></div>
+            <div><h2 className="text-xl font-bold text-foreground">عملاء التأمين</h2><p className="text-sm text-muted-foreground">{customers.length} عميل</p></div>
           </div>
         </div>
 
@@ -71,6 +77,7 @@ export default function InsuranceCustomers() {
                   <TableCell><Button variant="ghost" size="icon" onClick={() => openEdit(customer)}><Edit className="h-4 w-4" /></Button></TableCell>
                 </TableRow>
               ))}
+              {filtered.length === 0 && <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">لا يوجد عملاء</TableCell></TableRow>}
             </TableBody>
           </Table>
         </div>
@@ -86,7 +93,7 @@ export default function InsuranceCustomers() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setEditCustomer(null)}>إلغاء</Button>
-            <Button onClick={saveEdit}>حفظ</Button>
+            <Button onClick={saveEdit} disabled={updateCustomer.isPending}>حفظ</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

@@ -1,14 +1,14 @@
 import { useState } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Contact, InsuranceCustomer } from '@/types';
-import { mockInvoices, mockInsuranceSales } from '@/data/mockData';
 import { Edit, FileText, Save } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
+import { useInvoices, useInsuranceSales } from '@/hooks/useSupabaseData';
 
 interface AccountDetailsDialogProps {
   isOpen: boolean;
@@ -19,14 +19,16 @@ interface AccountDetailsDialogProps {
 }
 
 export function AccountDetailsDialog({ isOpen, onClose, contact, insuranceCustomer, type }: AccountDetailsDialogProps) {
+  const { data: invoices = [] } = useInvoices();
+  const { data: insuranceSales = [] } = useInsuranceSales();
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({ name: '', phone: '', address: '', card_number: '' });
 
   const startEdit = () => {
     if (type === 'insurance' && insuranceCustomer) {
-      setForm({ name: insuranceCustomer.name, phone: insuranceCustomer.phone, address: '', card_number: insuranceCustomer.card_number });
+      setForm({ name: insuranceCustomer.name, phone: insuranceCustomer.phone || '', address: '', card_number: insuranceCustomer.card_number || '' });
     } else if (contact) {
-      setForm({ name: contact.name, phone: contact.phone, address: contact.address, card_number: '' });
+      setForm({ name: contact.name, phone: contact.phone || '', address: contact.address || '', card_number: '' });
     }
     setEditing(true);
   };
@@ -40,16 +42,16 @@ export function AccountDetailsDialog({ isOpen, onClose, contact, insuranceCustom
 
   const getTransactions = () => {
     if (type === 'insurance' && insuranceCustomer) {
-      return mockInsuranceSales.filter(s => s.customer_id === insuranceCustomer.id);
+      return insuranceSales.filter(s => s.customer_id === insuranceCustomer.id);
     }
     if (contact) {
-      return mockInvoices.filter(i => i.contact_id === contact.id);
+      return invoices.filter(i => i.contact_id === contact.id);
     }
     return [];
   };
 
   const transactions = getTransactions();
-  const totalAmount = transactions.reduce((sum, t) => sum + t.total, 0);
+  const totalAmount = transactions.reduce((sum, t) => sum + Number(t.total), 0);
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -83,14 +85,13 @@ export function AccountDetailsDialog({ isOpen, onClose, contact, insuranceCustom
               <div className="rounded-lg border overflow-hidden">
                 <Table>
                   <TableHeader><TableRow>
-                    <TableHead className="text-right">الرقم</TableHead><TableHead className="text-right">التاريخ</TableHead><TableHead className="text-right">المبلغ</TableHead>
+                    <TableHead className="text-right">التاريخ</TableHead><TableHead className="text-right">المبلغ</TableHead>
                   </TableRow></TableHeader>
                   <TableBody>
                     {transactions.map((t: any) => (
                       <TableRow key={t.id}>
-                        <TableCell className="font-mono text-sm">{t.id}</TableCell>
                         <TableCell>{new Date(t.invoice_date || t.sale_date).toLocaleDateString('ar-SA')}</TableCell>
-                        <TableCell className="tabular-nums font-medium">{t.total.toFixed(2)} ر.س</TableCell>
+                        <TableCell className="tabular-nums font-medium">{Number(t.total).toFixed(2)} ر.س</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>

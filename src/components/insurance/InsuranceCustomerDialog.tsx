@@ -5,8 +5,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Search, UserPlus } from 'lucide-react';
 import { InsuranceCustomer } from '@/types';
-import { mockInsuranceCustomers } from '@/data/mockData';
 import { cn } from '@/lib/utils';
+import { useInsuranceCustomers, useCreateInsuranceCustomer } from '@/hooks/useSupabaseData';
 
 interface InsuranceCustomerDialogProps {
   isOpen: boolean;
@@ -15,6 +15,9 @@ interface InsuranceCustomerDialogProps {
 }
 
 export function InsuranceCustomerDialog({ isOpen, onClose, onConfirm }: InsuranceCustomerDialogProps) {
+  const { data: customers = [] } = useInsuranceCustomers();
+  const createCustomer = useCreateInsuranceCustomer();
+
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCustomer, setSelectedCustomer] = useState<InsuranceCustomer | null>(null);
   const [isNewCustomer, setIsNewCustomer] = useState(false);
@@ -22,23 +25,17 @@ export function InsuranceCustomerDialog({ isOpen, onClose, onConfirm }: Insuranc
   const [newPhone, setNewPhone] = useState('');
   const [newCardNumber, setNewCardNumber] = useState('');
 
-  const filteredCustomers = mockInsuranceCustomers.filter(
-    (c) => c.name.includes(searchQuery) || c.card_number.includes(searchQuery) || c.phone.includes(searchQuery)
+  const filteredCustomers = customers.filter(
+    (c) => c.name.includes(searchQuery) || (c.card_number || '').includes(searchQuery) || (c.phone || '').includes(searchQuery)
   );
 
-  const handleConfirm = () => {
+  const handleConfirm = async () => {
     if (isNewCustomer) {
       if (!newName.trim()) return;
-      const newCustomer: InsuranceCustomer = {
-        id: Date.now().toString(),
-        name: newName,
-        card_number: newCardNumber,
-        phone: newPhone,
-        balance: 0,
-        created_at: new Date().toISOString().split('T')[0],
-      };
-      mockInsuranceCustomers.push(newCustomer);
-      onConfirm(newCustomer);
+      try {
+        const newCustomer = await createCustomer.mutateAsync({ name: newName, card_number: newCardNumber, phone: newPhone });
+        onConfirm(newCustomer);
+      } catch { return; }
     } else if (selectedCustomer) {
       onConfirm(selectedCustomer);
     }
@@ -68,7 +65,7 @@ export function InsuranceCustomerDialog({ isOpen, onClose, onConfirm }: Insuranc
                 <button key={customer.id} onClick={() => setSelectedCustomer(customer)}
                   className={cn('w-full rounded-lg border p-3 text-right transition-colors', selectedCustomer?.id === customer.id ? 'border-primary bg-primary/10' : 'border-border hover:bg-muted/50')}>
                   <p className="font-medium text-card-foreground">{customer.name}</p>
-                  <p className="text-xs text-muted-foreground">{customer.card_number} • {customer.phone}</p>
+                  <p className="text-xs text-muted-foreground">{customer.card_number || ''} • {customer.phone || ''}</p>
                 </button>
               ))}
               {filteredCustomers.length === 0 && <p className="py-4 text-center text-sm text-muted-foreground">لا توجد نتائج</p>}
@@ -86,7 +83,7 @@ export function InsuranceCustomerDialog({ isOpen, onClose, onConfirm }: Insuranc
 
         <DialogFooter>
           <Button variant="outline" onClick={handleClose}>إلغاء</Button>
-          <Button onClick={handleConfirm} disabled={!isNewCustomer && !selectedCustomer || isNewCustomer && !newName.trim()}>تأكيد البيع</Button>
+          <Button onClick={handleConfirm} disabled={(!isNewCustomer && !selectedCustomer) || (isNewCustomer && !newName.trim()) || createCustomer.isPending}>تأكيد البيع</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
