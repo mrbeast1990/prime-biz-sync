@@ -3,17 +3,16 @@ import { NavLink, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard,
   Package,
-  Users,
   ShoppingCart,
-  FileText,
-  BookOpen,
   Settings,
   ChevronRight,
   ChevronLeft,
   Zap,
   Shield,
-  UserCheck,
   Truck,
+  Users,
+  Wallet,
+  BarChart3,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -28,11 +27,10 @@ const navItems: NavItem[] = [
   { title: 'البيع للتأمين', href: '/insurance-pos', icon: Shield },
   { title: 'البيع السريع', href: '/pos', icon: Zap },
   { title: 'المنتجات', href: '/products', icon: Package },
-  { title: 'جهات الاتصال', href: '/contacts', icon: Users },
-  { title: 'عملاء التأمين', href: '/insurance-customers', icon: UserCheck },
-  { title: 'الفواتير', href: '/invoices', icon: FileText },
   { title: 'المشتريات', href: '/purchases', icon: Truck },
-  { title: 'دفتر الحسابات', href: '/ledger', icon: BookOpen },
+  { title: 'الحسابات', href: '/accounts', icon: Users },
+  { title: 'الخزينة', href: '/treasury', icon: Wallet },
+  { title: 'التقارير', href: '/reports', icon: BarChart3 },
   { title: 'الإعدادات', href: '/settings', icon: Settings },
 ];
 

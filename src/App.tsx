@@ -9,6 +9,10 @@ import POS from "./pages/POS";
 import InsurancePOS from "./pages/InsurancePOS";
 import InsuranceCustomers from "./pages/InsuranceCustomers";
 import Purchases from "./pages/Purchases";
+import Accounts from "./pages/Accounts";
+import Treasury from "./pages/Treasury";
+import Reports from "./pages/Reports";
+import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -26,6 +30,10 @@ const App = () => (
           <Route path="/insurance-pos" element={<InsurancePOS />} />
           <Route path="/insurance-customers" element={<InsuranceCustomers />} />
           <Route path="/purchases" element={<Purchases />} />
+          <Route path="/accounts" element={<Accounts />} />
+          <Route path="/treasury" element={<Treasury />} />
+          <Route path="/reports" element={<Reports />} />
+          <Route path="/settings" element={<Settings />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

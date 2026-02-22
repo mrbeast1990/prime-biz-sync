@@ -258,3 +258,14 @@ export const mockPurchaseOrders: PurchaseOrder[] = [
     status: 'completed',
   },
 ];
+
+// Mock Treasury Entries
+import { TreasuryEntry } from '@/types';
+export const mockTreasuryEntries: TreasuryEntry[] = [
+  { id: 'T-001', date: '2024-12-20', type: 'income', category: 'sales', description: 'مبيعات نقدية - فاتورة INV-002', amount: 84.0, balance: 15940.0, referenceId: 'INV-002' },
+  { id: 'T-002', date: '2024-12-20', type: 'income', category: 'sales', description: 'دفعة من العميل أحمد محمد', amount: 100.0, balance: 16040.0, referenceId: 'INV-001' },
+  { id: 'T-003', date: '2024-12-20', type: 'income', category: 'insurance_sales', description: 'مبيعات تأمين - عبدالله سعيد', amount: 120.0, balance: 16160.0, referenceId: 'IS-001' },
+  { id: 'T-004', date: '2024-12-21', type: 'income', category: 'insurance_sales', description: 'مبيعات تأمين - نورة الحربي', amount: 85.0, balance: 16245.0, referenceId: 'IS-002' },
+  { id: 'T-005', date: '2024-12-19', type: 'expense', category: 'purchases', description: 'مشتريات - شركة الدواء المتحدة', amount: 3100.0, balance: 13145.0, referenceId: 'PO-001' },
+  { id: 'T-006', date: '2024-12-18', type: 'withdrawal', category: 'manual', description: 'سحب نقدي - مصاريف عامة', amount: 500.0, balance: 12645.0 },
+];
