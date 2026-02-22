@@ -1,0 +1,173 @@
+import { useState } from 'react';
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
+} from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Contact, InsuranceCustomer } from '@/types';
+import { mockInvoices, mockInsuranceSales } from '@/data/mockData';
+import { Edit, FileText, Save } from 'lucide-react';
+import { toast } from '@/hooks/use-toast';
+
+interface AccountDetailsDialogProps {
+  isOpen: boolean;
+  onClose: () => void;
+  contact?: Contact | null;
+  insuranceCustomer?: InsuranceCustomer | null;
+  type: 'customer' | 'supplier' | 'insurance';
+}
+
+export function AccountDetailsDialog({ isOpen, onClose, contact, insuranceCustomer, type }: AccountDetailsDialogProps) {
+  const [editing, setEditing] = useState(false);
+  const [form, setForm] = useState({ name: '', phone: '', address: '', cardNumber: '' });
+
+  const startEdit = () => {
+    if (type === 'insurance' && insuranceCustomer) {
+      setForm({ name: insuranceCustomer.name, phone: insuranceCustomer.phone, address: '', cardNumber: insuranceCustomer.cardNumber });
+    } else if (contact) {
+      setForm({ name: contact.name, phone: contact.phone, address: contact.address, cardNumber: '' });
+    }
+    setEditing(true);
+  };
+
+  const saveEdit = () => {
+    setEditing(false);
+    toast({ title: 'تم الحفظ', description: 'تم تحديث البيانات بنجاح' });
+  };
+
+  const getName = () => type === 'insurance' ? insuranceCustomer?.name : contact?.name;
+
+  // Get related transactions
+  const getTransactions = () => {
+    if (type === 'insurance' && insuranceCustomer) {
+      return mockInsuranceSales.filter(s => s.customerId === insuranceCustomer.id);
+    }
+    if (contact) {
+      return mockInvoices.filter(i => i.contactId === contact.id);
+    }
+    return [];
+  };
+
+  const transactions = getTransactions();
+  const totalAmount = transactions.reduce((sum, t) => sum + t.total, 0);
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-2xl max-h-[85vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <FileText className="h-5 w-5 text-primary" />
+            تفاصيل حساب: {getName()}
+          </DialogTitle>
+        </DialogHeader>
+
+        <Tabs defaultValue="transactions" dir="rtl">
+          <TabsList className="w-full">
+            <TabsTrigger value="transactions" className="flex-1">الحركات</TabsTrigger>
+            <TabsTrigger value="info" className="flex-1">البيانات</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="transactions" className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="rounded-lg bg-primary/10 p-4 text-center">
+                <p className="text-2xl font-bold text-primary">{transactions.length}</p>
+                <p className="text-sm text-muted-foreground">عدد العمليات</p>
+              </div>
+              <div className="rounded-lg bg-success/10 p-4 text-center">
+                <p className="text-2xl font-bold text-success">{totalAmount.toFixed(2)} ر.س</p>
+                <p className="text-sm text-muted-foreground">الإجمالي</p>
+              </div>
+            </div>
+
+            {transactions.length > 0 ? (
+              <div className="rounded-lg border overflow-hidden">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="text-right">الرقم</TableHead>
+                      <TableHead className="text-right">التاريخ</TableHead>
+                      <TableHead className="text-right">المبلغ</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {transactions.map((t: any) => (
+                      <TableRow key={t.id}>
+                        <TableCell className="font-mono text-sm">{t.id}</TableCell>
+                        <TableCell>{new Date(t.date).toLocaleDateString('ar-SA')}</TableCell>
+                        <TableCell className="tabular-nums font-medium">{t.total.toFixed(2)} ر.س</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            ) : (
+              <p className="text-center text-muted-foreground py-8">لا توجد حركات مسجلة</p>
+            )}
+          </TabsContent>
+
+          <TabsContent value="info" className="space-y-4">
+            {!editing ? (
+              <div className="space-y-3">
+                <div className="flex justify-between items-center p-3 rounded-lg bg-muted/50">
+                  <span className="text-muted-foreground">الاسم</span>
+                  <span className="font-medium">{getName()}</span>
+                </div>
+                <div className="flex justify-between items-center p-3 rounded-lg bg-muted/50">
+                  <span className="text-muted-foreground">الهاتف</span>
+                  <span dir="ltr">{type === 'insurance' ? insuranceCustomer?.phone : contact?.phone}</span>
+                </div>
+                {type !== 'insurance' && (
+                  <div className="flex justify-between items-center p-3 rounded-lg bg-muted/50">
+                    <span className="text-muted-foreground">العنوان</span>
+                    <span>{contact?.address || '—'}</span>
+                  </div>
+                )}
+                {type === 'insurance' && (
+                  <div className="flex justify-between items-center p-3 rounded-lg bg-muted/50">
+                    <span className="text-muted-foreground">رقم البطاقة</span>
+                    <span>{insuranceCustomer?.cardNumber || '—'}</span>
+                  </div>
+                )}
+                <Button variant="outline" onClick={startEdit} className="w-full">
+                  <Edit className="h-4 w-4 ml-2" /> تعديل البيانات
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div>
+                  <Label>الاسم</Label>
+                  <Input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} />
+                </div>
+                <div>
+                  <Label>الهاتف</Label>
+                  <Input value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} />
+                </div>
+                {type !== 'insurance' && (
+                  <div>
+                    <Label>العنوان</Label>
+                    <Input value={form.address} onChange={e => setForm({ ...form, address: e.target.value })} />
+                  </div>
+                )}
+                {type === 'insurance' && (
+                  <div>
+                    <Label>رقم البطاقة</Label>
+                    <Input value={form.cardNumber} onChange={e => setForm({ ...form, cardNumber: e.target.value })} />
+                  </div>
+                )}
+                <div className="flex gap-2">
+                  <Button variant="outline" onClick={() => setEditing(false)} className="flex-1">إلغاء</Button>
+                  <Button onClick={saveEdit} className="flex-1">
+                    <Save className="h-4 w-4 ml-2" /> حفظ
+                  </Button>
+                </div>
+              </div>
+            )}
+          </TabsContent>
+        </Tabs>
+      </DialogContent>
+    </Dialog>
+  );
+}

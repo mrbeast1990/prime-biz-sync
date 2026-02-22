@@ -109,3 +109,23 @@ export interface PurchaseOrder {
   date: string;
   status: 'pending' | 'completed';
 }
+
+// Treasury Entry
+export interface TreasuryEntry {
+  id: string;
+  date: string;
+  type: 'income' | 'expense' | 'deposit' | 'withdrawal';
+  category: 'sales' | 'insurance_sales' | 'purchases' | 'manual';
+  description: string;
+  amount: number;
+  balance: number;
+  referenceId?: string;
+}
+
+// Pharmacy Settings
+export interface PharmacySettings {
+  name: string;
+  phone: string;
+  address: string;
+  receiptSize: 'A4' | '80mm' | '58mm';
+}

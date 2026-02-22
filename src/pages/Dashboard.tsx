@@ -8,11 +8,14 @@ import {
   Package,
   AlertTriangle,
   Clock,
-  FileText,
+  Shield,
+  Wallet,
 } from 'lucide-react';
 import {
   mockDashboardStats,
   mockInvoices,
+  mockInsuranceSales,
+  mockTreasuryEntries,
   getLowStockProducts,
   getExpiringProducts,
 } from '@/data/mockData';
@@ -21,6 +24,12 @@ export default function Dashboard() {
   const stats = mockDashboardStats;
   const lowStockProducts = getLowStockProducts();
   const expiringProducts = getExpiringProducts();
+
+  const insuranceCustomersToday = mockInsuranceSales.length;
+  const treasuryBalance = mockTreasuryEntries.reduce((sum, e) => {
+    if (e.type === 'income' || e.type === 'deposit') return sum + e.amount;
+    return sum - e.amount;
+  }, 0);
 
   return (
     <MainLayout title="لوحة التحكم">
@@ -46,9 +55,9 @@ export default function Dashboard() {
           icon={<Package className="h-6 w-6 text-primary" />}
         />
         <StatCard
-          title="فواتير معلقة"
-          value={stats.pendingInvoices}
-          icon={<FileText className="h-6 w-6 text-warning-foreground" />}
+          title="رصيد الخزينة"
+          value={`${treasuryBalance.toFixed(2)} ر.س`}
+          icon={<Wallet className="h-6 w-6 text-warning-foreground" />}
           variant="warning"
         />
       </div>
@@ -100,12 +109,12 @@ export default function Dashboard() {
 
         <div className="rounded-xl bg-card p-6 shadow-card">
           <div className="flex items-center gap-4">
-            <div className="flex h-14 w-14 items-center justify-center rounded-full bg-success/10">
-              <TrendingUp className="h-7 w-7 text-success" />
+            <div className="flex h-14 w-14 items-center justify-center rounded-full bg-info/10">
+              <Shield className="h-7 w-7 text-info" />
             </div>
             <div>
-              <p className="text-3xl font-bold text-card-foreground">+15.3%</p>
-              <p className="text-sm text-muted-foreground">نمو المبيعات هذا الأسبوع</p>
+              <p className="text-3xl font-bold text-card-foreground">{insuranceCustomersToday}</p>
+              <p className="text-sm text-muted-foreground">عملاء تأمين اليوم</p>
             </div>
           </div>
         </div>

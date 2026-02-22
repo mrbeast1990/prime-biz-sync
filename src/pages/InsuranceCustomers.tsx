@@ -70,7 +70,7 @@ export default function InsuranceCustomers() {
                 <TableHead className="text-right">رقم البطاقة</TableHead>
                 <TableHead className="text-right">الهاتف</TableHead>
                 <TableHead className="text-right">عدد العمليات</TableHead>
-                <TableHead className="text-right">إجمالي المشتريات</TableHead>
+                <TableHead className="text-right">إجمالي المبيعات</TableHead>
                 <TableHead className="text-right">تاريخ التسجيل</TableHead>
                 <TableHead className="text-right">إجراءات</TableHead>
               </TableRow>
