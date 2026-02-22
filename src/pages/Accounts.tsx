@@ -14,29 +14,25 @@ export default function Accounts() {
   const [selectedInsurance, setSelectedInsurance] = useState<InsuranceCustomer | null>(null);
   const [dialogType, setDialogType] = useState<'customer' | 'supplier' | 'insurance'>('customer');
 
-  const customers = mockContacts.filter(c => c.type === 'customer');
-  const suppliers = mockContacts.filter(c => c.type === 'supplier');
+  const customers = mockContacts.filter(c => c.contact_type === 'customer');
+  const suppliers = mockContacts.filter(c => c.contact_type === 'supplier');
 
   const filterContacts = (contacts: Contact[]) =>
     contacts.filter(c => c.name.includes(searchQuery) || c.phone.includes(searchQuery));
 
   const filterInsurance = () =>
-    mockInsuranceCustomers.filter(c => c.name.includes(searchQuery) || c.cardNumber.includes(searchQuery) || c.phone.includes(searchQuery));
+    mockInsuranceCustomers.filter(c => c.name.includes(searchQuery) || c.card_number.includes(searchQuery) || c.phone.includes(searchQuery));
 
   const openContact = (contact: Contact, type: 'customer' | 'supplier') => {
-    setSelectedContact(contact);
-    setSelectedInsurance(null);
-    setDialogType(type);
+    setSelectedContact(contact); setSelectedInsurance(null); setDialogType(type);
   };
 
   const openInsurance = (customer: InsuranceCustomer) => {
-    setSelectedInsurance(customer);
-    setSelectedContact(null);
-    setDialogType('insurance');
+    setSelectedInsurance(customer); setSelectedContact(null); setDialogType('insurance');
   };
 
   const getInsuranceSalesTotal = (customerId: string) =>
-    mockInsuranceSales.filter(s => s.customerId === customerId).reduce((sum, s) => sum + s.total, 0);
+    mockInsuranceSales.filter(s => s.customer_id === customerId).reduce((sum, s) => sum + s.total, 0);
 
   return (
     <MainLayout title="الحسابات">
@@ -48,28 +44,17 @@ export default function Accounts() {
 
         <Tabs defaultValue="customers" dir="rtl">
           <TabsList className="w-full max-w-md">
-            <TabsTrigger value="customers" className="flex-1 gap-2">
-              <Users className="h-4 w-4" /> الزبائن
-            </TabsTrigger>
-            <TabsTrigger value="suppliers" className="flex-1 gap-2">
-              <Truck className="h-4 w-4" /> الموردين
-            </TabsTrigger>
-            <TabsTrigger value="insurance" className="flex-1 gap-2">
-              <Shield className="h-4 w-4" /> عملاء التأمين
-            </TabsTrigger>
+            <TabsTrigger value="customers" className="flex-1 gap-2"><Users className="h-4 w-4" /> الزبائن</TabsTrigger>
+            <TabsTrigger value="suppliers" className="flex-1 gap-2"><Truck className="h-4 w-4" /> الموردين</TabsTrigger>
+            <TabsTrigger value="insurance" className="flex-1 gap-2"><Shield className="h-4 w-4" /> عملاء التأمين</TabsTrigger>
           </TabsList>
 
           <TabsContent value="customers">
             <div className="rounded-xl bg-card shadow-card overflow-hidden">
               <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="text-right">الاسم</TableHead>
-                    <TableHead className="text-right">الهاتف</TableHead>
-                    <TableHead className="text-right">العنوان</TableHead>
-                    <TableHead className="text-right">الرصيد</TableHead>
-                  </TableRow>
-                </TableHeader>
+                <TableHeader><TableRow>
+                  <TableHead className="text-right">الاسم</TableHead><TableHead className="text-right">الهاتف</TableHead><TableHead className="text-right">العنوان</TableHead><TableHead className="text-right">الرصيد</TableHead>
+                </TableRow></TableHeader>
                 <TableBody>
                   {filterContacts(customers).map(c => (
                     <TableRow key={c.id} className="cursor-pointer hover:bg-muted/50" onClick={() => openContact(c, 'customer')}>
@@ -79,9 +64,7 @@ export default function Accounts() {
                       <TableCell className="tabular-nums font-medium">{c.balance.toFixed(2)} ر.س</TableCell>
                     </TableRow>
                   ))}
-                  {filterContacts(customers).length === 0 && (
-                    <TableRow><TableCell colSpan={4} className="text-center py-8 text-muted-foreground">لا يوجد زبائن</TableCell></TableRow>
-                  )}
+                  {filterContacts(customers).length === 0 && <TableRow><TableCell colSpan={4} className="text-center py-8 text-muted-foreground">لا يوجد زبائن</TableCell></TableRow>}
                 </TableBody>
               </Table>
             </div>
@@ -90,14 +73,9 @@ export default function Accounts() {
           <TabsContent value="suppliers">
             <div className="rounded-xl bg-card shadow-card overflow-hidden">
               <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="text-right">الاسم</TableHead>
-                    <TableHead className="text-right">الهاتف</TableHead>
-                    <TableHead className="text-right">العنوان</TableHead>
-                    <TableHead className="text-right">الرصيد</TableHead>
-                  </TableRow>
-                </TableHeader>
+                <TableHeader><TableRow>
+                  <TableHead className="text-right">الاسم</TableHead><TableHead className="text-right">الهاتف</TableHead><TableHead className="text-right">العنوان</TableHead><TableHead className="text-right">الرصيد</TableHead>
+                </TableRow></TableHeader>
                 <TableBody>
                   {filterContacts(suppliers).map(c => (
                     <TableRow key={c.id} className="cursor-pointer hover:bg-muted/50" onClick={() => openContact(c, 'supplier')}>
@@ -107,9 +85,7 @@ export default function Accounts() {
                       <TableCell className="tabular-nums font-medium">{c.balance.toFixed(2)} ر.س</TableCell>
                     </TableRow>
                   ))}
-                  {filterContacts(suppliers).length === 0 && (
-                    <TableRow><TableCell colSpan={4} className="text-center py-8 text-muted-foreground">لا يوجد موردين</TableCell></TableRow>
-                  )}
+                  {filterContacts(suppliers).length === 0 && <TableRow><TableCell colSpan={4} className="text-center py-8 text-muted-foreground">لا يوجد موردين</TableCell></TableRow>}
                 </TableBody>
               </Table>
             </div>
@@ -118,26 +94,19 @@ export default function Accounts() {
           <TabsContent value="insurance">
             <div className="rounded-xl bg-card shadow-card overflow-hidden">
               <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="text-right">الاسم</TableHead>
-                    <TableHead className="text-right">رقم البطاقة</TableHead>
-                    <TableHead className="text-right">الهاتف</TableHead>
-                    <TableHead className="text-right">إجمالي المبيعات</TableHead>
-                  </TableRow>
-                </TableHeader>
+                <TableHeader><TableRow>
+                  <TableHead className="text-right">الاسم</TableHead><TableHead className="text-right">رقم البطاقة</TableHead><TableHead className="text-right">الهاتف</TableHead><TableHead className="text-right">إجمالي المبيعات</TableHead>
+                </TableRow></TableHeader>
                 <TableBody>
                   {filterInsurance().map(c => (
                     <TableRow key={c.id} className="cursor-pointer hover:bg-muted/50" onClick={() => openInsurance(c)}>
                       <TableCell className="font-medium">{c.name}</TableCell>
-                      <TableCell>{c.cardNumber || '—'}</TableCell>
+                      <TableCell>{c.card_number || '—'}</TableCell>
                       <TableCell dir="ltr" className="text-right">{c.phone || '—'}</TableCell>
                       <TableCell className="tabular-nums font-medium">{getInsuranceSalesTotal(c.id).toFixed(2)} ر.س</TableCell>
                     </TableRow>
                   ))}
-                  {filterInsurance().length === 0 && (
-                    <TableRow><TableCell colSpan={4} className="text-center py-8 text-muted-foreground">لا يوجد عملاء تأمين</TableCell></TableRow>
-                  )}
+                  {filterInsurance().length === 0 && <TableRow><TableCell colSpan={4} className="text-center py-8 text-muted-foreground">لا يوجد عملاء تأمين</TableCell></TableRow>}
                 </TableBody>
               </Table>
             </div>

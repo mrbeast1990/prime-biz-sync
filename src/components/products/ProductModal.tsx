@@ -32,40 +32,40 @@ const categories = [
 export function ProductModal({ isOpen, onClose, onSave, product }: ProductModalProps) {
   const [formData, setFormData] = useState({
     barcode: '',
-    tradeName: '',
-    scientificName: '',
+    trade_name: '',
+    scientific_name: '',
     category: '',
-    stockQuantity: 0,
-    minStock: 10,
-    costPrice: 0,
-    salePrice: 0,
-    expiryDate: '',
+    stock_quantity: 0,
+    min_stock: 10,
+    cost_price: 0,
+    sale_price: 0,
+    expiry_date: '',
   });
 
   useEffect(() => {
     if (product) {
       setFormData({
         barcode: product.barcode,
-        tradeName: product.tradeName,
-        scientificName: product.scientificName,
+        trade_name: product.trade_name,
+        scientific_name: product.scientific_name,
         category: product.category,
-        stockQuantity: product.stockQuantity,
-        minStock: product.minStock,
-        costPrice: product.costPrice,
-        salePrice: product.salePrice,
-        expiryDate: product.expiryDate,
+        stock_quantity: product.stock_quantity,
+        min_stock: product.min_stock,
+        cost_price: product.cost_price,
+        sale_price: product.sale_price,
+        expiry_date: product.expiry_date,
       });
     } else {
       setFormData({
         barcode: '',
-        tradeName: '',
-        scientificName: '',
+        trade_name: '',
+        scientific_name: '',
         category: '',
-        stockQuantity: 0,
-        minStock: 10,
-        costPrice: 0,
-        salePrice: 0,
-        expiryDate: '',
+        stock_quantity: 0,
+        min_stock: 10,
+        cost_price: 0,
+        sale_price: 0,
+        expiry_date: '',
       });
     }
   }, [product, isOpen]);
@@ -119,11 +119,11 @@ export function ProductModal({ isOpen, onClose, onSave, product }: ProductModalP
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="tradeName">الاسم التجاري</Label>
+              <Label htmlFor="trade_name">الاسم التجاري</Label>
               <Input
-                id="tradeName"
-                value={formData.tradeName}
-                onChange={(e) => setFormData({ ...formData, tradeName: e.target.value })}
+                id="trade_name"
+                value={formData.trade_name}
+                onChange={(e) => setFormData({ ...formData, trade_name: e.target.value })}
                 placeholder="الاسم التجاري للمنتج"
                 className="input-focus"
                 required
@@ -131,11 +131,11 @@ export function ProductModal({ isOpen, onClose, onSave, product }: ProductModalP
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="scientificName">الاسم العلمي</Label>
+              <Label htmlFor="scientific_name">الاسم العلمي</Label>
               <Input
-                id="scientificName"
-                value={formData.scientificName}
-                onChange={(e) => setFormData({ ...formData, scientificName: e.target.value })}
+                id="scientific_name"
+                value={formData.scientific_name}
+                onChange={(e) => setFormData({ ...formData, scientific_name: e.target.value })}
                 placeholder="الاسم العلمي"
                 className="input-focus"
               />
@@ -144,26 +144,26 @@ export function ProductModal({ isOpen, onClose, onSave, product }: ProductModalP
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="stockQuantity">الكمية المتوفرة</Label>
+              <Label htmlFor="stock_quantity">الكمية المتوفرة</Label>
               <Input
-                id="stockQuantity"
+                id="stock_quantity"
                 type="number"
                 min="0"
-                value={formData.stockQuantity}
-                onChange={(e) => setFormData({ ...formData, stockQuantity: Number(e.target.value) })}
+                value={formData.stock_quantity}
+                onChange={(e) => setFormData({ ...formData, stock_quantity: Number(e.target.value) })}
                 className="input-focus"
                 required
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="minStock">الحد الأدنى للمخزون</Label>
+              <Label htmlFor="min_stock">الحد الأدنى للمخزون</Label>
               <Input
-                id="minStock"
+                id="min_stock"
                 type="number"
                 min="0"
-                value={formData.minStock}
-                onChange={(e) => setFormData({ ...formData, minStock: Number(e.target.value) })}
+                value={formData.min_stock}
+                onChange={(e) => setFormData({ ...formData, min_stock: Number(e.target.value) })}
                 className="input-focus"
                 required
               />
@@ -172,40 +172,40 @@ export function ProductModal({ isOpen, onClose, onSave, product }: ProductModalP
 
           <div className="grid grid-cols-3 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="costPrice">سعر التكلفة</Label>
+              <Label htmlFor="cost_price">سعر التكلفة</Label>
               <Input
-                id="costPrice"
+                id="cost_price"
                 type="number"
                 min="0"
                 step="0.01"
-                value={formData.costPrice}
-                onChange={(e) => setFormData({ ...formData, costPrice: Number(e.target.value) })}
+                value={formData.cost_price}
+                onChange={(e) => setFormData({ ...formData, cost_price: Number(e.target.value) })}
                 className="input-focus"
                 required
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="salePrice">سعر البيع</Label>
+              <Label htmlFor="sale_price">سعر البيع</Label>
               <Input
-                id="salePrice"
+                id="sale_price"
                 type="number"
                 min="0"
                 step="0.01"
-                value={formData.salePrice}
-                onChange={(e) => setFormData({ ...formData, salePrice: Number(e.target.value) })}
+                value={formData.sale_price}
+                onChange={(e) => setFormData({ ...formData, sale_price: Number(e.target.value) })}
                 className="input-focus"
                 required
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="expiryDate">تاريخ الانتهاء</Label>
+              <Label htmlFor="expiry_date">تاريخ الانتهاء</Label>
               <Input
-                id="expiryDate"
+                id="expiry_date"
                 type="date"
-                value={formData.expiryDate}
-                onChange={(e) => setFormData({ ...formData, expiryDate: e.target.value })}
+                value={formData.expiry_date}
+                onChange={(e) => setFormData({ ...formData, expiry_date: e.target.value })}
                 className="input-focus"
                 required
               />

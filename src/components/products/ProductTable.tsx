@@ -17,9 +17,9 @@ interface ProductTableProps {
 }
 
 export function ProductTable({ products, onEdit, onDelete }: ProductTableProps) {
-  const isLowStock = (product: Product) => product.stockQuantity <= product.minStock;
+  const isLowStock = (product: Product) => product.stock_quantity <= product.min_stock;
   const isExpiringSoon = (product: Product) => {
-    const expiryDate = new Date(product.expiryDate);
+    const expiryDate = new Date(product.expiry_date);
     const threeMonthsFromNow = new Date();
     threeMonthsFromNow.setMonth(threeMonthsFromNow.getMonth() + 3);
     return expiryDate <= threeMonthsFromNow;
@@ -56,13 +56,13 @@ export function ProductTable({ products, onEdit, onDelete }: ProductTableProps) 
                 </td>
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-2">
-                    <span className="font-medium text-card-foreground">{product.tradeName}</span>
+                    <span className="font-medium text-card-foreground">{product.trade_name}</span>
                     {(isLowStock(product) || isExpiringSoon(product)) && (
                       <AlertTriangle className="h-4 w-4 text-warning" />
                     )}
                   </div>
                 </td>
-                <td className="px-4 py-3 text-sm text-muted-foreground">{product.scientificName}</td>
+                <td className="px-4 py-3 text-sm text-muted-foreground">{product.scientific_name}</td>
                 <td className="px-4 py-3">
                   <span className="inline-flex items-center rounded-full bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary">
                     {product.category}
@@ -77,11 +77,11 @@ export function ProductTable({ products, onEdit, onDelete }: ProductTableProps) 
                         : 'bg-success/10 text-success'
                     )}
                   >
-                    {product.stockQuantity}
+                    {product.stock_quantity}
                   </span>
                 </td>
-                <td className="px-4 py-3 tabular-nums text-muted-foreground">{product.costPrice.toFixed(2)} ر.س</td>
-                <td className="px-4 py-3 tabular-nums font-medium text-card-foreground">{product.salePrice.toFixed(2)} ر.س</td>
+                <td className="px-4 py-3 tabular-nums text-muted-foreground">{product.cost_price.toFixed(2)} ر.س</td>
+                <td className="px-4 py-3 tabular-nums font-medium text-card-foreground">{product.sale_price.toFixed(2)} ر.س</td>
                 <td className="px-4 py-3">
                   <span
                     className={cn(
@@ -91,7 +91,7 @@ export function ProductTable({ products, onEdit, onDelete }: ProductTableProps) 
                         : 'bg-muted text-muted-foreground'
                     )}
                   >
-                    {new Date(product.expiryDate).toLocaleDateString('ar-SA')}
+                    {new Date(product.expiry_date).toLocaleDateString('ar-SA')}
                   </span>
                 </td>
                 <td className="px-4 py-3">

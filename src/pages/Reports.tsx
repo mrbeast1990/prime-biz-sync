@@ -16,13 +16,13 @@ export default function Reports() {
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
 
-  const salesTotal = mockInvoices.filter(i => i.type === 'sale').reduce((s, i) => s + i.total, 0);
+  const salesTotal = mockInvoices.filter(i => i.invoice_type === 'sale').reduce((s, i) => s + i.total, 0);
   const insuranceSalesTotal = mockInsuranceSales.reduce((s, i) => s + i.total, 0);
   const purchasesTotal = mockPurchaseOrders.reduce((s, o) => s + o.total, 0);
-  const costOfGoods = mockInvoices.filter(i => i.type === 'sale').reduce((sum, inv) => {
+  const costOfGoods = mockInvoices.filter(i => i.invoice_type === 'sale').reduce((sum, inv) => {
     return sum + inv.items.reduce((iSum, item) => {
-      const product = mockProducts.find(p => p.id === item.productId);
-      return iSum + (product ? product.costPrice * item.quantity : 0);
+      const product = mockProducts.find(p => p.id === item.product_id);
+      return iSum + (product ? product.cost_price * item.quantity : 0);
     }, 0);
   }, 0);
   const profit = salesTotal + insuranceSalesTotal - costOfGoods;
@@ -33,85 +33,32 @@ export default function Reports() {
     { name: 'المشتريات', value: purchasesTotal },
   ];
 
-  const chartConfig = {
-    value: { label: 'القيمة', color: 'hsl(217, 91%, 50%)' },
-  };
+  const chartConfig = { value: { label: 'القيمة', color: 'hsl(217, 91%, 50%)' } };
 
-  // Top selling products
   const productSales: Record<string, { name: string; qty: number; total: number }> = {};
-  mockInvoices.filter(i => i.type === 'sale').forEach(inv => {
+  mockInvoices.filter(i => i.invoice_type === 'sale').forEach(inv => {
     inv.items.forEach(item => {
-      if (!productSales[item.productId]) productSales[item.productId] = { name: item.productName, qty: 0, total: 0 };
-      productSales[item.productId].qty += item.quantity;
-      productSales[item.productId].total += item.total;
+      if (!productSales[item.product_id]) productSales[item.product_id] = { name: item.product_name, qty: 0, total: 0 };
+      productSales[item.product_id].qty += item.quantity;
+      productSales[item.product_id].total += item.total;
     });
   });
   const topProducts = Object.values(productSales).sort((a, b) => b.total - a.total);
-
-  // Low stock
-  const lowStock = mockProducts.filter(p => p.stockQuantity <= p.minStock);
+  const lowStock = mockProducts.filter(p => p.stock_quantity <= p.min_stock);
 
   return (
     <MainLayout title="التقارير">
       <div className="space-y-6">
-        {/* Date Filter */}
         <div className="flex items-end gap-4 flex-wrap">
-          <div>
-            <Label>من تاريخ</Label>
-            <Input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} />
-          </div>
-          <div>
-            <Label>إلى تاريخ</Label>
-            <Input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} />
-          </div>
+          <div><Label>من تاريخ</Label><Input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} /></div>
+          <div><Label>إلى تاريخ</Label><Input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} /></div>
         </div>
 
-        {/* Summary Cards */}
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
-          <Card className="border-0 shadow-card">
-            <CardContent className="p-6 flex items-center gap-4">
-              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-success/10">
-                <TrendingUp className="h-6 w-6 text-success" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">إجمالي المبيعات</p>
-                <p className="text-xl font-bold">{(salesTotal + insuranceSalesTotal).toFixed(2)} ر.س</p>
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="border-0 shadow-card">
-            <CardContent className="p-6 flex items-center gap-4">
-              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-destructive/10">
-                <ShoppingCart className="h-6 w-6 text-destructive" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">إجمالي المشتريات</p>
-                <p className="text-xl font-bold">{purchasesTotal.toFixed(2)} ر.س</p>
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="border-0 shadow-card">
-            <CardContent className="p-6 flex items-center gap-4">
-              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
-                <BarChart3 className="h-6 w-6 text-primary" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">صافي الربح</p>
-                <p className="text-xl font-bold">{profit.toFixed(2)} ر.س</p>
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="border-0 shadow-card">
-            <CardContent className="p-6 flex items-center gap-4">
-              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-warning/10">
-                <Package className="h-6 w-6 text-warning" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">مخزون منخفض</p>
-                <p className="text-xl font-bold">{lowStock.length} منتج</p>
-              </div>
-            </CardContent>
-          </Card>
+          <Card className="border-0 shadow-card"><CardContent className="p-6 flex items-center gap-4"><div className="flex h-12 w-12 items-center justify-center rounded-xl bg-success/10"><TrendingUp className="h-6 w-6 text-success" /></div><div><p className="text-sm text-muted-foreground">إجمالي المبيعات</p><p className="text-xl font-bold">{(salesTotal + insuranceSalesTotal).toFixed(2)} ر.س</p></div></CardContent></Card>
+          <Card className="border-0 shadow-card"><CardContent className="p-6 flex items-center gap-4"><div className="flex h-12 w-12 items-center justify-center rounded-xl bg-destructive/10"><ShoppingCart className="h-6 w-6 text-destructive" /></div><div><p className="text-sm text-muted-foreground">إجمالي المشتريات</p><p className="text-xl font-bold">{purchasesTotal.toFixed(2)} ر.س</p></div></CardContent></Card>
+          <Card className="border-0 shadow-card"><CardContent className="p-6 flex items-center gap-4"><div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10"><BarChart3 className="h-6 w-6 text-primary" /></div><div><p className="text-sm text-muted-foreground">صافي الربح</p><p className="text-xl font-bold">{profit.toFixed(2)} ر.س</p></div></CardContent></Card>
+          <Card className="border-0 shadow-card"><CardContent className="p-6 flex items-center gap-4"><div className="flex h-12 w-12 items-center justify-center rounded-xl bg-warning/10"><Package className="h-6 w-6 text-warning" /></div><div><p className="text-sm text-muted-foreground">مخزون منخفض</p><p className="text-xl font-bold">{lowStock.length} منتج</p></div></CardContent></Card>
         </div>
 
         <Tabs defaultValue="sales" dir="rtl">
@@ -128,13 +75,10 @@ export default function Reports() {
                 <ChartContainer config={chartConfig} className="h-[300px] w-full">
                   <BarChart data={salesChartData}>
                     <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="name" />
-                    <YAxis />
+                    <XAxis dataKey="name" /><YAxis />
                     <ChartTooltip content={<ChartTooltipContent />} />
                     <Bar dataKey="value" radius={[8, 8, 0, 0]}>
-                      {salesChartData.map((_, index) => (
-                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                      ))}
+                      {salesChartData.map((_, index) => <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />)}
                     </Bar>
                   </BarChart>
                 </ChartContainer>
@@ -147,24 +91,10 @@ export default function Reports() {
               <CardHeader><CardTitle>المنتجات الأكثر مبيعاً</CardTitle></CardHeader>
               <CardContent>
                 <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="text-right">المنتج</TableHead>
-                      <TableHead className="text-right">الكمية المباعة</TableHead>
-                      <TableHead className="text-right">الإجمالي</TableHead>
-                    </TableRow>
-                  </TableHeader>
+                  <TableHeader><TableRow><TableHead className="text-right">المنتج</TableHead><TableHead className="text-right">الكمية المباعة</TableHead><TableHead className="text-right">الإجمالي</TableHead></TableRow></TableHeader>
                   <TableBody>
-                    {topProducts.map((p, i) => (
-                      <TableRow key={i}>
-                        <TableCell className="font-medium">{p.name}</TableCell>
-                        <TableCell>{p.qty}</TableCell>
-                        <TableCell className="tabular-nums">{p.total.toFixed(2)} ر.س</TableCell>
-                      </TableRow>
-                    ))}
-                    {topProducts.length === 0 && (
-                      <TableRow><TableCell colSpan={3} className="text-center py-8 text-muted-foreground">لا توجد بيانات</TableCell></TableRow>
-                    )}
+                    {topProducts.map((p, i) => <TableRow key={i}><TableCell className="font-medium">{p.name}</TableCell><TableCell>{p.qty}</TableCell><TableCell className="tabular-nums">{p.total.toFixed(2)} ر.س</TableCell></TableRow>)}
+                    {topProducts.length === 0 && <TableRow><TableCell colSpan={3} className="text-center py-8 text-muted-foreground">لا توجد بيانات</TableCell></TableRow>}
                   </TableBody>
                 </Table>
               </CardContent>
@@ -176,23 +106,16 @@ export default function Reports() {
               <CardHeader><CardTitle>حركة المخزون - منتجات بمخزون منخفض</CardTitle></CardHeader>
               <CardContent>
                 <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="text-right">المنتج</TableHead>
-                      <TableHead className="text-right">المخزون الحالي</TableHead>
-                      <TableHead className="text-right">الحد الأدنى</TableHead>
-                      <TableHead className="text-right">الحالة</TableHead>
-                    </TableRow>
-                  </TableHeader>
+                  <TableHeader><TableRow><TableHead className="text-right">المنتج</TableHead><TableHead className="text-right">المخزون الحالي</TableHead><TableHead className="text-right">الحد الأدنى</TableHead><TableHead className="text-right">الحالة</TableHead></TableRow></TableHeader>
                   <TableBody>
                     {mockProducts.map(p => (
                       <TableRow key={p.id}>
-                        <TableCell className="font-medium">{p.tradeName}</TableCell>
-                        <TableCell>{p.stockQuantity}</TableCell>
-                        <TableCell>{p.minStock}</TableCell>
+                        <TableCell className="font-medium">{p.trade_name}</TableCell>
+                        <TableCell>{p.stock_quantity}</TableCell>
+                        <TableCell>{p.min_stock}</TableCell>
                         <TableCell>
-                          <span className={`inline-block rounded-full px-3 py-1 text-xs font-medium ${p.stockQuantity <= p.minStock ? 'bg-destructive/10 text-destructive' : 'bg-success/10 text-success'}`}>
-                            {p.stockQuantity <= p.minStock ? 'منخفض' : 'متوفر'}
+                          <span className={`inline-block rounded-full px-3 py-1 text-xs font-medium ${p.stock_quantity <= p.min_stock ? 'bg-destructive/10 text-destructive' : 'bg-success/10 text-success'}`}>
+                            {p.stock_quantity <= p.min_stock ? 'منخفض' : 'متوفر'}
                           </span>
                         </TableCell>
                       </TableRow>

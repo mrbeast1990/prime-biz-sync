@@ -27,7 +27,7 @@ export default function Dashboard() {
 
   const insuranceCustomersToday = mockInsuranceSales.length;
   const treasuryBalance = mockTreasuryEntries.reduce((sum, e) => {
-    if (e.type === 'income' || e.type === 'deposit') return sum + e.amount;
+    if (e.entry_type === 'income' || e.entry_type === 'deposit') return sum + e.amount;
     return sum - e.amount;
   }, 0);
 

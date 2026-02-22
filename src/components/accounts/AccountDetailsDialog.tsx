@@ -1,7 +1,5 @@
 import { useState } from 'react';
-import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
-} from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -22,13 +20,13 @@ interface AccountDetailsDialogProps {
 
 export function AccountDetailsDialog({ isOpen, onClose, contact, insuranceCustomer, type }: AccountDetailsDialogProps) {
   const [editing, setEditing] = useState(false);
-  const [form, setForm] = useState({ name: '', phone: '', address: '', cardNumber: '' });
+  const [form, setForm] = useState({ name: '', phone: '', address: '', card_number: '' });
 
   const startEdit = () => {
     if (type === 'insurance' && insuranceCustomer) {
-      setForm({ name: insuranceCustomer.name, phone: insuranceCustomer.phone, address: '', cardNumber: insuranceCustomer.cardNumber });
+      setForm({ name: insuranceCustomer.name, phone: insuranceCustomer.phone, address: '', card_number: insuranceCustomer.card_number });
     } else if (contact) {
-      setForm({ name: contact.name, phone: contact.phone, address: contact.address, cardNumber: '' });
+      setForm({ name: contact.name, phone: contact.phone, address: contact.address, card_number: '' });
     }
     setEditing(true);
   };
@@ -40,13 +38,12 @@ export function AccountDetailsDialog({ isOpen, onClose, contact, insuranceCustom
 
   const getName = () => type === 'insurance' ? insuranceCustomer?.name : contact?.name;
 
-  // Get related transactions
   const getTransactions = () => {
     if (type === 'insurance' && insuranceCustomer) {
-      return mockInsuranceSales.filter(s => s.customerId === insuranceCustomer.id);
+      return mockInsuranceSales.filter(s => s.customer_id === insuranceCustomer.id);
     }
     if (contact) {
-      return mockInvoices.filter(i => i.contactId === contact.id);
+      return mockInvoices.filter(i => i.contact_id === contact.id);
     }
     return [];
   };
@@ -85,18 +82,14 @@ export function AccountDetailsDialog({ isOpen, onClose, contact, insuranceCustom
             {transactions.length > 0 ? (
               <div className="rounded-lg border overflow-hidden">
                 <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="text-right">الرقم</TableHead>
-                      <TableHead className="text-right">التاريخ</TableHead>
-                      <TableHead className="text-right">المبلغ</TableHead>
-                    </TableRow>
-                  </TableHeader>
+                  <TableHeader><TableRow>
+                    <TableHead className="text-right">الرقم</TableHead><TableHead className="text-right">التاريخ</TableHead><TableHead className="text-right">المبلغ</TableHead>
+                  </TableRow></TableHeader>
                   <TableBody>
                     {transactions.map((t: any) => (
                       <TableRow key={t.id}>
                         <TableCell className="font-mono text-sm">{t.id}</TableCell>
-                        <TableCell>{new Date(t.date).toLocaleDateString('ar-SA')}</TableCell>
+                        <TableCell>{new Date(t.invoice_date || t.sale_date).toLocaleDateString('ar-SA')}</TableCell>
                         <TableCell className="tabular-nums font-medium">{t.total.toFixed(2)} ر.س</TableCell>
                       </TableRow>
                     ))}
@@ -112,56 +105,32 @@ export function AccountDetailsDialog({ isOpen, onClose, contact, insuranceCustom
             {!editing ? (
               <div className="space-y-3">
                 <div className="flex justify-between items-center p-3 rounded-lg bg-muted/50">
-                  <span className="text-muted-foreground">الاسم</span>
-                  <span className="font-medium">{getName()}</span>
+                  <span className="text-muted-foreground">الاسم</span><span className="font-medium">{getName()}</span>
                 </div>
                 <div className="flex justify-between items-center p-3 rounded-lg bg-muted/50">
-                  <span className="text-muted-foreground">الهاتف</span>
-                  <span dir="ltr">{type === 'insurance' ? insuranceCustomer?.phone : contact?.phone}</span>
+                  <span className="text-muted-foreground">الهاتف</span><span dir="ltr">{type === 'insurance' ? insuranceCustomer?.phone : contact?.phone}</span>
                 </div>
                 {type !== 'insurance' && (
                   <div className="flex justify-between items-center p-3 rounded-lg bg-muted/50">
-                    <span className="text-muted-foreground">العنوان</span>
-                    <span>{contact?.address || '—'}</span>
+                    <span className="text-muted-foreground">العنوان</span><span>{contact?.address || '—'}</span>
                   </div>
                 )}
                 {type === 'insurance' && (
                   <div className="flex justify-between items-center p-3 rounded-lg bg-muted/50">
-                    <span className="text-muted-foreground">رقم البطاقة</span>
-                    <span>{insuranceCustomer?.cardNumber || '—'}</span>
+                    <span className="text-muted-foreground">رقم البطاقة</span><span>{insuranceCustomer?.card_number || '—'}</span>
                   </div>
                 )}
-                <Button variant="outline" onClick={startEdit} className="w-full">
-                  <Edit className="h-4 w-4 ml-2" /> تعديل البيانات
-                </Button>
+                <Button variant="outline" onClick={startEdit} className="w-full"><Edit className="h-4 w-4 ml-2" /> تعديل البيانات</Button>
               </div>
             ) : (
               <div className="space-y-4">
-                <div>
-                  <Label>الاسم</Label>
-                  <Input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} />
-                </div>
-                <div>
-                  <Label>الهاتف</Label>
-                  <Input value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} />
-                </div>
-                {type !== 'insurance' && (
-                  <div>
-                    <Label>العنوان</Label>
-                    <Input value={form.address} onChange={e => setForm({ ...form, address: e.target.value })} />
-                  </div>
-                )}
-                {type === 'insurance' && (
-                  <div>
-                    <Label>رقم البطاقة</Label>
-                    <Input value={form.cardNumber} onChange={e => setForm({ ...form, cardNumber: e.target.value })} />
-                  </div>
-                )}
+                <div><Label>الاسم</Label><Input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} /></div>
+                <div><Label>الهاتف</Label><Input value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} /></div>
+                {type !== 'insurance' && <div><Label>العنوان</Label><Input value={form.address} onChange={e => setForm({ ...form, address: e.target.value })} /></div>}
+                {type === 'insurance' && <div><Label>رقم البطاقة</Label><Input value={form.card_number} onChange={e => setForm({ ...form, card_number: e.target.value })} /></div>}
                 <div className="flex gap-2">
                   <Button variant="outline" onClick={() => setEditing(false)} className="flex-1">إلغاء</Button>
-                  <Button onClick={saveEdit} className="flex-1">
-                    <Save className="h-4 w-4 ml-2" /> حفظ
-                  </Button>
+                  <Button onClick={saveEdit} className="flex-1"><Save className="h-4 w-4 ml-2" /> حفظ</Button>
                 </div>
               </div>
             )}
