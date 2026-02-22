@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
 import { Product } from '@/types';
-import { X } from 'lucide-react';
+import { Shuffle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
 import {
   Dialog,
   DialogContent,
@@ -29,17 +30,25 @@ const categories = [
   'أدوية السكري',
 ];
 
+const packagingTypes = ['علبة', 'شريط', 'قطعة', 'أنبوب', 'زجاجة'];
+
+const generateCode = () => Math.floor(1000 + Math.random() * 9000).toString();
+
 export function ProductModal({ isOpen, onClose, onSave, product }: ProductModalProps) {
   const [formData, setFormData] = useState({
     barcode: '',
     trade_name: '',
     scientific_name: '',
     category: '',
+    packaging_type: 'علبة',
+    units_per_package: 1,
+    has_expiry: true,
+    expiry_date: '',
+    image_url: '',
     stock_quantity: 0,
     min_stock: 10,
     cost_price: 0,
     sale_price: 0,
-    expiry_date: '',
   });
 
   useEffect(() => {
@@ -49,23 +58,31 @@ export function ProductModal({ isOpen, onClose, onSave, product }: ProductModalP
         trade_name: product.trade_name,
         scientific_name: product.scientific_name,
         category: product.category,
+        packaging_type: product.packaging_type || 'علبة',
+        units_per_package: product.units_per_package || 1,
+        has_expiry: product.has_expiry ?? true,
+        expiry_date: product.expiry_date,
+        image_url: product.image_url || '',
         stock_quantity: product.stock_quantity,
         min_stock: product.min_stock,
         cost_price: product.cost_price,
         sale_price: product.sale_price,
-        expiry_date: product.expiry_date,
       });
     } else {
       setFormData({
-        barcode: '',
+        barcode: generateCode(),
         trade_name: '',
         scientific_name: '',
         category: '',
+        packaging_type: 'علبة',
+        units_per_package: 1,
+        has_expiry: true,
+        expiry_date: '',
+        image_url: '',
         stock_quantity: 0,
         min_stock: 10,
         cost_price: 0,
         sale_price: 0,
-        expiry_date: '',
       });
     }
   }, [product, isOpen]);
@@ -80,56 +97,46 @@ export function ProductModal({ isOpen, onClose, onSave, product }: ProductModalP
       <DialogContent className="max-w-2xl">
         <DialogHeader>
           <DialogTitle className="text-xl font-bold">
-            {product ? 'تعديل المنتج' : 'إضافة منتج جديد'}
+            {product ? 'تعديل الصنف' : 'إضافة صنف جديد'}
           </DialogTitle>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="mt-4 space-y-6">
-          <div className="grid grid-cols-2 gap-4">
+        <form onSubmit={handleSubmit} className="mt-4 space-y-5">
+          {/* الكود واسم الصنف */}
+          <div className="grid grid-cols-3 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="barcode">الباركود</Label>
-              <Input
-                id="barcode"
-                value={formData.barcode}
-                onChange={(e) => setFormData({ ...formData, barcode: e.target.value })}
-                placeholder="أدخل الباركود أو امسحه"
-                className="input-focus font-mono"
-                required
-              />
+              <Label htmlFor="barcode">الكود</Label>
+              <div className="flex gap-2">
+                <Input
+                  id="barcode"
+                  value={formData.barcode}
+                  onChange={(e) => setFormData({ ...formData, barcode: e.target.value })}
+                  placeholder="كود الصنف"
+                  className="input-focus font-mono"
+                  required
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  onClick={() => setFormData({ ...formData, barcode: generateCode() })}
+                  title="توليد كود عشوائي"
+                >
+                  <Shuffle className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
-
             <div className="space-y-2">
-              <Label htmlFor="category">التصنيف</Label>
-              <select
-                id="category"
-                value={formData.category}
-                onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm input-focus"
-                required
-              >
-                <option value="">اختر التصنيف</option>
-                {categories.map((cat) => (
-                  <option key={cat} value={cat}>
-                    {cat}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="trade_name">الاسم التجاري</Label>
+              <Label htmlFor="trade_name">اسم الصنف</Label>
               <Input
                 id="trade_name"
                 value={formData.trade_name}
                 onChange={(e) => setFormData({ ...formData, trade_name: e.target.value })}
-                placeholder="الاسم التجاري للمنتج"
+                placeholder="اسم الصنف"
                 className="input-focus"
                 required
               />
             </div>
-
             <div className="space-y-2">
               <Label htmlFor="scientific_name">الاسم العلمي</Label>
               <Input
@@ -142,35 +149,89 @@ export function ProductModal({ isOpen, onClose, onSave, product }: ProductModalP
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          {/* التصنيف والتعبئة */}
+          <div className="grid grid-cols-3 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="stock_quantity">الكمية المتوفرة</Label>
-              <Input
-                id="stock_quantity"
-                type="number"
-                min="0"
-                value={formData.stock_quantity}
-                onChange={(e) => setFormData({ ...formData, stock_quantity: Number(e.target.value) })}
-                className="input-focus"
+              <Label htmlFor="category">التصنيف</Label>
+              <select
+                id="category"
+                value={formData.category}
+                onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm input-focus"
                 required
-              />
+              >
+                <option value="">اختر التصنيف</option>
+                {categories.map((cat) => (
+                  <option key={cat} value={cat}>{cat}</option>
+                ))}
+              </select>
             </div>
-
             <div className="space-y-2">
-              <Label htmlFor="min_stock">الحد الأدنى للمخزون</Label>
+              <Label htmlFor="packaging_type">نوع التعبئة</Label>
+              <select
+                id="packaging_type"
+                value={formData.packaging_type}
+                onChange={(e) => setFormData({ ...formData, packaging_type: e.target.value })}
+                className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm input-focus"
+              >
+                {packagingTypes.map((type) => (
+                  <option key={type} value={type}>{type}</option>
+                ))}
+              </select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="units_per_package">عدد الوحدات في العبوة</Label>
               <Input
-                id="min_stock"
+                id="units_per_package"
                 type="number"
-                min="0"
-                value={formData.min_stock}
-                onChange={(e) => setFormData({ ...formData, min_stock: Number(e.target.value) })}
+                min="1"
+                value={formData.units_per_package}
+                onChange={(e) => setFormData({ ...formData, units_per_package: Number(e.target.value) })}
                 className="input-focus"
                 required
               />
             </div>
           </div>
 
-          <div className="grid grid-cols-3 gap-4">
+          {/* الصلاحية */}
+          <div className="grid grid-cols-2 gap-4 items-end">
+            <div className="flex items-center gap-3">
+              <Switch
+                id="has_expiry"
+                checked={formData.has_expiry}
+                onCheckedChange={(checked) => setFormData({ ...formData, has_expiry: checked })}
+              />
+              <Label htmlFor="has_expiry">خاضع لصلاحية</Label>
+            </div>
+            {formData.has_expiry && (
+              <div className="space-y-2">
+                <Label htmlFor="expiry_date">تاريخ الانتهاء</Label>
+                <Input
+                  id="expiry_date"
+                  type="date"
+                  value={formData.expiry_date}
+                  onChange={(e) => setFormData({ ...formData, expiry_date: e.target.value })}
+                  className="input-focus"
+                  required
+                />
+              </div>
+            )}
+          </div>
+
+          {/* صورة الصنف */}
+          <div className="space-y-2">
+            <Label htmlFor="image_url">رابط صورة الصنف (اختياري)</Label>
+            <Input
+              id="image_url"
+              value={formData.image_url}
+              onChange={(e) => setFormData({ ...formData, image_url: e.target.value })}
+              placeholder="رابط الصورة"
+              className="input-focus"
+            />
+          </div>
+
+          {/* الحقول المالية */}
+          <div className="grid grid-cols-4 gap-4">
             <div className="space-y-2">
               <Label htmlFor="cost_price">سعر التكلفة</Label>
               <Input
@@ -184,7 +245,6 @@ export function ProductModal({ isOpen, onClose, onSave, product }: ProductModalP
                 required
               />
             </div>
-
             <div className="space-y-2">
               <Label htmlFor="sale_price">سعر البيع</Label>
               <Input
@@ -198,14 +258,26 @@ export function ProductModal({ isOpen, onClose, onSave, product }: ProductModalP
                 required
               />
             </div>
-
             <div className="space-y-2">
-              <Label htmlFor="expiry_date">تاريخ الانتهاء</Label>
+              <Label htmlFor="stock_quantity">الكمية</Label>
               <Input
-                id="expiry_date"
-                type="date"
-                value={formData.expiry_date}
-                onChange={(e) => setFormData({ ...formData, expiry_date: e.target.value })}
+                id="stock_quantity"
+                type="number"
+                min="0"
+                value={formData.stock_quantity}
+                onChange={(e) => setFormData({ ...formData, stock_quantity: Number(e.target.value) })}
+                className="input-focus"
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="min_stock">الحد الأدنى</Label>
+              <Input
+                id="min_stock"
+                type="number"
+                min="0"
+                value={formData.min_stock}
+                onChange={(e) => setFormData({ ...formData, min_stock: Number(e.target.value) })}
                 className="input-focus"
                 required
               />
@@ -213,12 +285,8 @@ export function ProductModal({ isOpen, onClose, onSave, product }: ProductModalP
           </div>
 
           <div className="flex justify-end gap-3 pt-4 border-t">
-            <Button type="button" variant="outline" onClick={onClose}>
-              إلغاء
-            </Button>
-            <Button type="submit">
-              {product ? 'حفظ التغييرات' : 'إضافة المنتج'}
-            </Button>
+            <Button type="button" variant="outline" onClick={onClose}>إلغاء</Button>
+            <Button type="submit">{product ? 'حفظ التغييرات' : 'إضافة الصنف'}</Button>
           </div>
         </form>
       </DialogContent>

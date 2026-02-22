@@ -4,17 +4,30 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
   Barcode, Search, Plus, Minus, Trash2, CreditCard, Banknote, User, ShoppingCart, X,
+  RotateCcw, AlertTriangle, UserPlus,
 } from 'lucide-react';
-import { mockProducts } from '@/data/mockData';
-import { Product, CartItem } from '@/types';
+import { mockProducts, mockContacts } from '@/data/mockData';
+import { Product, CartItem, SaleMode } from '@/types';
 import { cn } from '@/lib/utils';
 import { toast } from '@/hooks/use-toast';
+
+const saleModes: { mode: SaleMode; label: string; icon: React.ElementType; variant: 'default' | 'secondary' | 'outline' | 'destructive' }[] = [
+  { mode: 'cash', label: 'نقداً', icon: Banknote, variant: 'default' },
+  { mode: 'card', label: 'بطاقة', icon: CreditCard, variant: 'secondary' },
+  { mode: 'credit', label: 'مبيعات آجل', icon: UserPlus, variant: 'outline' },
+  { mode: 'return', label: 'استرجاع', icon: RotateCcw, variant: 'outline' },
+  { mode: 'damage', label: 'إتلاف', icon: AlertTriangle, variant: 'destructive' },
+];
 
 export default function POS() {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [barcodeInput, setBarcodeInput] = useState('');
+  const [saleMode, setSaleMode] = useState<SaleMode>('cash');
+  const [customerName, setCustomerName] = useState('');
   const barcodeRef = useRef<HTMLInputElement>(null);
+
+  const customers = mockContacts.filter(c => c.contact_type === 'customer');
 
   const filteredProducts = mockProducts.filter(
     (product) =>
@@ -51,7 +64,7 @@ export default function POS() {
       addToCart(product);
       setBarcodeInput('');
     } else {
-      toast({ title: 'غير موجود', description: 'لم يتم العثور على منتج بهذا الباركود', variant: 'destructive' });
+      toast({ title: 'غير موجود', description: 'لم يتم العثور على صنف بهذا الكود', variant: 'destructive' });
     }
     barcodeRef.current?.focus();
   };
@@ -78,13 +91,31 @@ export default function POS() {
   const total = cart.reduce((sum, item) => sum + item.total, 0);
   const itemCount = cart.reduce((sum, item) => sum + item.quantity, 0);
 
-  const handleCheckout = (paymentMethod: 'cash' | 'card') => {
+  const handleCheckout = () => {
     if (cart.length === 0) {
-      toast({ title: 'السلة فارغة', description: 'أضف منتجات إلى السلة أولاً', variant: 'destructive' });
+      toast({ title: 'السلة فارغة', description: 'أضف أصناف إلى السلة أولاً', variant: 'destructive' });
       return;
     }
-    toast({ title: 'تم البيع بنجاح', description: `تم إتمام عملية البيع بقيمة ${total.toFixed(2)} ر.س` });
+
+    if (saleMode === 'credit' && !customerName.trim()) {
+      toast({ title: 'مطلوب', description: 'يرجى إدخال اسم الزبون للمبيعات الآجلة', variant: 'destructive' });
+      return;
+    }
+
+    const modeLabels: Record<SaleMode, string> = {
+      cash: 'بيع نقدي',
+      card: 'بيع ببطاقة',
+      credit: `بيع آجل - ${customerName}`,
+      return: 'استرجاع',
+      damage: 'إتلاف',
+    };
+
+    toast({
+      title: saleMode === 'return' ? 'تم الاسترجاع' : saleMode === 'damage' ? 'تم تسجيل الإتلاف' : 'تم البيع بنجاح',
+      description: `${modeLabels[saleMode]} بقيمة ${total.toFixed(2)} ر.س`,
+    });
     clearCart();
+    setCustomerName('');
   };
 
   return (
@@ -94,13 +125,13 @@ export default function POS() {
           <form onSubmit={handleBarcodeSubmit} className="mb-4">
             <div className="relative">
               <Barcode className="absolute right-3 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
-              <Input ref={barcodeRef} value={barcodeInput} onChange={(e) => setBarcodeInput(e.target.value)} placeholder="امسح الباركود هنا..." className="pr-10 h-12 text-lg font-mono input-focus" />
+              <Input ref={barcodeRef} value={barcodeInput} onChange={(e) => setBarcodeInput(e.target.value)} placeholder="امسح الباركود أو أدخل الكود..." className="pr-10 h-12 text-lg font-mono input-focus" />
             </div>
           </form>
 
           <div className="relative mb-4">
             <Search className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="بحث عن منتج..." className="pr-9 input-focus" />
+            <Input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="بحث عن صنف..." className="pr-9 input-focus" />
           </div>
 
           <div className="flex-1 overflow-y-auto custom-scrollbar">
@@ -137,7 +168,7 @@ export default function POS() {
               </div>
               <div>
                 <h2 className="font-semibold text-card-foreground">السلة</h2>
-                <p className="text-sm text-muted-foreground">{itemCount} منتج</p>
+                <p className="text-sm text-muted-foreground">{itemCount} صنف</p>
               </div>
             </div>
             {cart.length > 0 && (
@@ -150,7 +181,7 @@ export default function POS() {
               <div className="flex h-full flex-col items-center justify-center text-center">
                 <ShoppingCart className="h-12 w-12 text-muted-foreground/50" />
                 <p className="mt-4 text-muted-foreground">السلة فارغة</p>
-                <p className="text-sm text-muted-foreground">امسح الباركود أو اختر منتجاً</p>
+                <p className="text-sm text-muted-foreground">امسح الكود أو اختر صنفاً</p>
               </div>
             ) : (
               <div className="space-y-3">
@@ -179,18 +210,60 @@ export default function POS() {
             )}
           </div>
 
-          <div className="border-t border-border p-4">
-            <Button variant="outline" className="mb-4 w-full justify-start gap-2"><User className="h-4 w-4" /><span>عميل نقدي</span></Button>
-            <div className="mb-4 rounded-lg bg-primary/10 p-4">
+          <div className="border-t border-border p-4 space-y-3">
+            {/* Sale mode selector */}
+            <div className="flex flex-wrap gap-2">
+              {saleModes.map(({ mode, label, icon: Icon, variant }) => (
+                <Button
+                  key={mode}
+                  size="sm"
+                  variant={saleMode === mode ? 'default' : 'outline'}
+                  className={cn('gap-1.5 text-xs flex-1 min-w-0', saleMode === mode && mode === 'damage' && 'bg-destructive text-destructive-foreground hover:bg-destructive/90')}
+                  onClick={() => setSaleMode(mode)}
+                >
+                  <Icon className="h-3.5 w-3.5" />
+                  {label}
+                </Button>
+              ))}
+            </div>
+
+            {/* Customer name for credit sales */}
+            {saleMode === 'credit' && (
+              <div className="relative">
+                <User className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  value={customerName}
+                  onChange={(e) => setCustomerName(e.target.value)}
+                  placeholder="اسم الزبون..."
+                  className="pr-9 input-focus"
+                  list="customers-list"
+                />
+                <datalist id="customers-list">
+                  {customers.map(c => (
+                    <option key={c.id} value={c.name} />
+                  ))}
+                </datalist>
+              </div>
+            )}
+
+            <div className="rounded-lg bg-primary/10 p-4">
               <div className="flex items-center justify-between">
                 <span className="text-muted-foreground">الإجمالي</span>
                 <span className="text-3xl font-bold text-primary tabular-nums">{total.toFixed(2)} ر.س</span>
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-3">
-              <Button size="lg" className="gap-2" onClick={() => handleCheckout('cash')}><Banknote className="h-5 w-5" />نقداً</Button>
-              <Button size="lg" variant="secondary" className="gap-2" onClick={() => handleCheckout('card')}><CreditCard className="h-5 w-5" />بطاقة</Button>
-            </div>
+
+            <Button
+              size="lg"
+              className={cn('w-full gap-2', saleMode === 'damage' && 'bg-destructive hover:bg-destructive/90')}
+              onClick={handleCheckout}
+            >
+              {saleMode === 'cash' && <><Banknote className="h-5 w-5" />تأكيد البيع نقداً</>}
+              {saleMode === 'card' && <><CreditCard className="h-5 w-5" />تأكيد البيع بالبطاقة</>}
+              {saleMode === 'credit' && <><UserPlus className="h-5 w-5" />تسجيل بيع آجل</>}
+              {saleMode === 'return' && <><RotateCcw className="h-5 w-5" />تأكيد الاسترجاع</>}
+              {saleMode === 'damage' && <><AlertTriangle className="h-5 w-5" />تسجيل الإتلاف</>}
+            </Button>
           </div>
         </div>
       </div>
