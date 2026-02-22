@@ -4,13 +4,16 @@ import { ProductTable } from '@/components/products/ProductTable';
 import { ProductModal } from '@/components/products/ProductModal';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Plus, Search, Download, Upload, Filter } from 'lucide-react';
-import { mockProducts } from '@/data/mockData';
+import { Plus, Search, Download, Upload, Filter, Loader2 } from 'lucide-react';
 import { Product } from '@/types';
 import { toast } from '@/hooks/use-toast';
+import { useProducts, useCreateProduct, useUpdateProduct, useDeleteProduct } from '@/hooks/useSupabaseData';
 
 export default function Products() {
-  const [products, setProducts] = useState<Product[]>(mockProducts);
+  const { data: products = [], isLoading } = useProducts();
+  const createProduct = useCreateProduct();
+  const updateProduct = useUpdateProduct();
+  const deleteProduct = useDeleteProduct();
   const [searchQuery, setSearchQuery] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
@@ -18,9 +21,9 @@ export default function Products() {
   const filteredProducts = products.filter(
     (product) =>
       product.trade_name.includes(searchQuery) ||
-      product.scientific_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      product.barcode.includes(searchQuery) ||
-      product.category.includes(searchQuery)
+      (product.scientific_name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (product.barcode || '').includes(searchQuery) ||
+      (product.category || '').includes(searchQuery)
   );
 
   const handleEdit = (product: Product) => {
@@ -28,53 +31,47 @@ export default function Products() {
     setIsModalOpen(true);
   };
 
-  const handleDelete = (product: Product) => {
+  const handleDelete = async (product: Product) => {
     if (window.confirm(`هل أنت متأكد من حذف "${product.trade_name}"؟`)) {
-      setProducts(products.filter((p) => p.id !== product.id));
-      toast({ title: 'تم الحذف', description: `تم حذف الصنف "${product.trade_name}" بنجاح` });
+      try {
+        await deleteProduct.mutateAsync(product.id);
+        toast({ title: 'تم الحذف', description: `تم حذف الصنف "${product.trade_name}" بنجاح` });
+      } catch {
+        toast({ title: 'خطأ', description: 'فشل حذف الصنف', variant: 'destructive' });
+      }
     }
   };
 
-  const handleSave = (productData: Partial<Product>) => {
-    if (selectedProduct) {
-      setProducts(
-        products.map((p) =>
-          p.id === selectedProduct.id
-            ? { ...p, ...productData, updated_at: new Date().toISOString() }
-            : p
-        )
-      );
-      toast({ title: 'تم التحديث', description: 'تم تحديث بيانات الصنف بنجاح' });
-    } else {
-      const newProduct: Product = {
-        id: String(Date.now()),
-        barcode: productData.barcode || '',
-        trade_name: productData.trade_name || '',
-        scientific_name: productData.scientific_name || '',
-        stock_quantity: productData.stock_quantity || 0,
-        cost_price: productData.cost_price || 0,
-        sale_price: productData.sale_price || 0,
-        expiry_date: productData.expiry_date || '',
-        min_stock: productData.min_stock || 10,
-        category: productData.category || '',
-        packaging_type: productData.packaging_type || 'علبة',
-        units_per_package: productData.units_per_package || 1,
-        has_expiry: productData.has_expiry ?? true,
-        image_url: productData.image_url,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      };
-      setProducts([...products, newProduct]);
-      toast({ title: 'تمت الإضافة', description: 'تم إضافة الصنف الجديد بنجاح' });
+  const handleSave = async (productData: Partial<Product>) => {
+    try {
+      if (selectedProduct) {
+        await updateProduct.mutateAsync({ id: selectedProduct.id, ...productData });
+        toast({ title: 'تم التحديث', description: 'تم تحديث بيانات الصنف بنجاح' });
+      } else {
+        await createProduct.mutateAsync(productData);
+        toast({ title: 'تمت الإضافة', description: 'تم إضافة الصنف الجديد بنجاح' });
+      }
+      setIsModalOpen(false);
+      setSelectedProduct(null);
+    } catch {
+      toast({ title: 'خطأ', description: 'فشل حفظ الصنف', variant: 'destructive' });
     }
-    setIsModalOpen(false);
-    setSelectedProduct(null);
   };
 
   const handleAddNew = () => {
     setSelectedProduct(null);
     setIsModalOpen(true);
   };
+
+  if (isLoading) {
+    return (
+      <MainLayout title="بطاقة صنف">
+        <div className="flex items-center justify-center h-64">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      </MainLayout>
+    );
+  }
 
   return (
     <MainLayout title="بطاقة صنف">
@@ -124,7 +121,7 @@ export default function Products() {
         <ProductTable products={filteredProducts} onEdit={handleEdit} onDelete={handleDelete} />
       </div>
 
-      {filteredProducts.length === 0 && (
+      {filteredProducts.length === 0 && !isLoading && (
         <div className="mt-8 text-center"><p className="text-muted-foreground">لا توجد أصناف مطابقة للبحث</p></div>
       )}
 

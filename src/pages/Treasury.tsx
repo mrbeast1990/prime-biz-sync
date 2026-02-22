@@ -7,28 +7,44 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { Wallet, TrendingUp, TrendingDown, ShoppingCart, Shield, Plus, ArrowUpCircle, ArrowDownCircle } from 'lucide-react';
-import { mockTreasuryEntries } from '@/data/mockData';
+import { Wallet, TrendingUp, TrendingDown, Shield, Plus, ArrowUpCircle, ArrowDownCircle, Loader2 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
+import { useTreasuryEntries, useCreateTreasuryEntry } from '@/hooks/useSupabaseData';
 
 export default function Treasury() {
+  const { data: entries = [], isLoading } = useTreasuryEntries();
+  const createEntry = useCreateTreasuryEntry();
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [newEntry, setNewEntry] = useState({ type: 'deposit' as 'deposit' | 'withdrawal', description: '', amount: '' });
 
-  const salesTotal = mockTreasuryEntries.filter(e => e.category === 'sales').reduce((s, e) => s + e.amount, 0);
-  const insuranceTotal = mockTreasuryEntries.filter(e => e.category === 'insurance_sales').reduce((s, e) => s + e.amount, 0);
-  const purchasesTotal = mockTreasuryEntries.filter(e => e.category === 'purchases').reduce((s, e) => s + e.amount, 0);
-  const currentBalance = salesTotal + insuranceTotal - purchasesTotal - mockTreasuryEntries.filter(e => e.entry_type === 'withdrawal').reduce((s, e) => s + e.amount, 0);
+  const salesTotal = entries.filter(e => e.category === 'sales').reduce((s, e) => s + Number(e.amount), 0);
+  const insuranceTotal = entries.filter(e => e.category === 'insurance_sales').reduce((s, e) => s + Number(e.amount), 0);
+  const purchasesTotal = entries.filter(e => e.category === 'purchases').reduce((s, e) => s + Number(e.amount), 0);
+  const currentBalance = salesTotal + insuranceTotal - purchasesTotal - entries.filter(e => e.entry_type === 'withdrawal').reduce((s, e) => s + Number(e.amount), 0);
 
-  const handleAddEntry = () => {
+  const handleAddEntry = async () => {
     if (!newEntry.description || !newEntry.amount) {
       toast({ title: 'خطأ', description: 'أدخل جميع البيانات', variant: 'destructive' });
       return;
     }
-    toast({ title: 'تم', description: 'تمت إضافة الحركة بنجاح' });
-    setShowAddDialog(false);
-    setNewEntry({ type: 'deposit', description: '', amount: '' });
+    try {
+      await createEntry.mutateAsync({
+        entry_type: newEntry.type,
+        description: newEntry.description,
+        amount: Number(newEntry.amount),
+        category: 'manual',
+      });
+      toast({ title: 'تم', description: 'تمت إضافة الحركة بنجاح' });
+      setShowAddDialog(false);
+      setNewEntry({ type: 'deposit', description: '', amount: '' });
+    } catch {
+      toast({ title: 'خطأ', description: 'فشل إضافة الحركة', variant: 'destructive' });
+    }
   };
+
+  if (isLoading) {
+    return <MainLayout title="الخزينة"><div className="flex items-center justify-center h-64"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div></MainLayout>;
+  }
 
   return (
     <MainLayout title="الخزينة">
@@ -51,7 +67,7 @@ export default function Treasury() {
                 <TableHead className="text-right">التاريخ</TableHead><TableHead className="text-right">الوصف</TableHead><TableHead className="text-right">النوع</TableHead><TableHead className="text-right">المبلغ</TableHead>
               </TableRow></TableHeader>
               <TableBody>
-                {mockTreasuryEntries.map(entry => (
+                {entries.map(entry => (
                   <TableRow key={entry.id}>
                     <TableCell>{new Date(entry.entry_date).toLocaleDateString('ar-SA')}</TableCell>
                     <TableCell>{entry.description}</TableCell>
@@ -61,9 +77,10 @@ export default function Treasury() {
                         {entry.entry_type === 'income' ? 'دخول' : entry.entry_type === 'expense' ? 'خروج' : entry.entry_type === 'deposit' ? 'إيداع' : 'سحب'}
                       </span>
                     </TableCell>
-                    <TableCell className="tabular-nums font-medium">{entry.amount.toFixed(2)} ر.س</TableCell>
+                    <TableCell className="tabular-nums font-medium">{Number(entry.amount).toFixed(2)} ر.س</TableCell>
                   </TableRow>
                 ))}
+                {entries.length === 0 && <TableRow><TableCell colSpan={4} className="text-center py-8 text-muted-foreground">لا توجد حركات</TableCell></TableRow>}
               </TableBody>
             </Table>
           </CardContent>
@@ -80,7 +97,7 @@ export default function Treasury() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowAddDialog(false)}>إلغاء</Button>
-            <Button onClick={handleAddEntry}>إضافة</Button>
+            <Button onClick={handleAddEntry} disabled={createEntry.isPending}>إضافة</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

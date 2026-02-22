@@ -3,26 +3,30 @@ import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
-  Barcode, Search, Plus, Minus, Trash2, Banknote, ShoppingCart, X, Shield,
+  Barcode, Search, Plus, Minus, Trash2, Banknote, ShoppingCart, X, Shield, Loader2,
 } from 'lucide-react';
-import { mockProducts, mockInsuranceSales } from '@/data/mockData';
 import { Product, CartItem, InsuranceCustomer } from '@/types';
 import { cn } from '@/lib/utils';
 import { toast } from '@/hooks/use-toast';
 import { InsuranceCustomerDialog } from '@/components/insurance/InsuranceCustomerDialog';
+import { useProducts, useCreateInsuranceSale, useUpdateProductStock } from '@/hooks/useSupabaseData';
 
 export default function InsurancePOS() {
+  const { data: products = [], isLoading } = useProducts();
+  const createSale = useCreateInsuranceSale();
+  const updateStock = useUpdateProductStock();
+
   const [cart, setCart] = useState<CartItem[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [barcodeInput, setBarcodeInput] = useState('');
   const [showCustomerDialog, setShowCustomerDialog] = useState(false);
   const barcodeRef = useRef<HTMLInputElement>(null);
 
-  const filteredProducts = mockProducts.filter(
+  const filteredProducts = products.filter(
     (product) =>
       product.trade_name.includes(searchQuery) ||
-      product.scientific_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      product.barcode.includes(searchQuery)
+      (product.scientific_name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (product.barcode || '').includes(searchQuery)
   );
 
   useEffect(() => { barcodeRef.current?.focus(); }, []);
@@ -46,7 +50,7 @@ export default function InsurancePOS() {
 
   const handleBarcodeSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const product = mockProducts.find((p) => p.barcode === barcodeInput);
+    const product = products.find((p) => p.barcode === barcodeInput);
     if (product) { addToCart(product); setBarcodeInput(''); }
     else { toast({ title: 'غير موجود', description: 'لم يتم العثور على منتج بهذا الباركود', variant: 'destructive' }); }
     barcodeRef.current?.focus();
@@ -77,20 +81,23 @@ export default function InsurancePOS() {
     setShowCustomerDialog(true);
   };
 
-  const handleConfirmSale = (customer: InsuranceCustomer) => {
-    const sale = {
-      id: `IS-${Date.now()}`,
-      customer_id: customer.id,
-      customer_name: customer.name,
-      items: [...cart],
-      total,
-      sale_date: new Date().toISOString().split('T')[0],
-    };
-    mockInsuranceSales.push(sale);
-    toast({ title: 'تم البيع بنجاح', description: `تم تسجيل بيع تأمين بقيمة ${total.toFixed(2)} ر.س للعميل ${customer.name}` });
-    clearCart();
-    setShowCustomerDialog(false);
+  const handleConfirmSale = async (customer: InsuranceCustomer) => {
+    try {
+      await createSale.mutateAsync({ customer_id: customer.id, customer_name: customer.name, total });
+      for (const item of cart) {
+        await updateStock.mutateAsync({ id: item.product.id, delta: -item.quantity });
+      }
+      toast({ title: 'تم البيع بنجاح', description: `تم تسجيل بيع تأمين بقيمة ${total.toFixed(2)} ر.س للعميل ${customer.name}` });
+      clearCart();
+      setShowCustomerDialog(false);
+    } catch {
+      toast({ title: 'خطأ', description: 'فشل تسجيل البيع', variant: 'destructive' });
+    }
   };
+
+  if (isLoading) {
+    return <MainLayout title="البيع لمستخدمين التأمين"><div className="flex items-center justify-center h-64"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div></MainLayout>;
+  }
 
   return (
     <MainLayout title="البيع لمستخدمين التأمين">
@@ -102,12 +109,10 @@ export default function InsurancePOS() {
               <Input ref={barcodeRef} value={barcodeInput} onChange={(e) => setBarcodeInput(e.target.value)} placeholder="امسح الباركود هنا..." className="pr-10 h-12 text-lg font-mono input-focus" />
             </div>
           </form>
-
           <div className="relative mb-4">
             <Search className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="بحث عن منتج..." className="pr-9 input-focus" />
           </div>
-
           <div className="flex-1 overflow-y-auto custom-scrollbar">
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
               {filteredProducts.map((product) => (
@@ -133,7 +138,6 @@ export default function InsurancePOS() {
             </div>
             {cart.length > 0 && <Button variant="ghost" size="icon" onClick={clearCart}><X className="h-4 w-4" /></Button>}
           </div>
-
           <div className="flex-1 overflow-y-auto custom-scrollbar p-4">
             {cart.length === 0 ? (
               <div className="flex h-full flex-col items-center justify-center text-center">
@@ -165,7 +169,6 @@ export default function InsurancePOS() {
               </div>
             )}
           </div>
-
           <div className="border-t border-border p-4">
             <div className="mb-4 rounded-lg bg-primary/10 p-4">
               <div className="flex items-center justify-between">
@@ -173,11 +176,12 @@ export default function InsurancePOS() {
                 <span className="text-3xl font-bold text-primary tabular-nums">{total.toFixed(2)} ر.س</span>
               </div>
             </div>
-            <Button size="lg" className="w-full gap-2" onClick={handleSell}><Banknote className="h-5 w-5" />بيع للتأمين</Button>
+            <Button size="lg" className="w-full gap-2" onClick={handleSell} disabled={createSale.isPending}>
+              {createSale.isPending ? <Loader2 className="h-5 w-5 animate-spin" /> : <><Banknote className="h-5 w-5" />بيع للتأمين</>}
+            </Button>
           </div>
         </div>
       </div>
-
       <InsuranceCustomerDialog isOpen={showCustomerDialog} onClose={() => setShowCustomerDialog(false)} onConfirm={handleConfirmSale} />
     </MainLayout>
   );

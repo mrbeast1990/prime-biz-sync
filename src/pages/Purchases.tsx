@@ -4,30 +4,32 @@ import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Search, Plus, Minus, Trash2, Barcode, PackagePlus, UserPlus, Truck, Save } from 'lucide-react';
-import { mockProducts, mockContacts, mockPurchaseOrders } from '@/data/mockData';
+import { Search, Plus, Minus, Trash2, Barcode, PackagePlus, UserPlus, Truck, Save, Loader2 } from 'lucide-react';
 import { Contact, Product, InvoiceItem } from '@/types';
 import { cn } from '@/lib/utils';
 import { toast } from '@/hooks/use-toast';
 import { SupplierModal } from '@/components/purchases/SupplierModal';
+import { useProducts, useContacts, useCreateInvoice, useUpdateProductStock } from '@/hooks/useSupabaseData';
 
 export default function Purchases() {
   const navigate = useNavigate();
+  const { data: products = [], isLoading: loadingProducts } = useProducts();
+  const { data: allContacts = [] } = useContacts('supplier');
+  const createInvoice = useCreateInvoice();
+  const updateStock = useUpdateProductStock();
+
   const [selectedSupplier, setSelectedSupplier] = useState<Contact | null>(null);
   const [showSupplierModal, setShowSupplierModal] = useState(false);
   const [items, setItems] = useState<InvoiceItem[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [barcodeInput, setBarcodeInput] = useState('');
 
-  const suppliers = mockContacts.filter((c) => c.contact_type === 'supplier');
-
-  const filteredProducts = mockProducts.filter(
+  const filteredProducts = products.filter(
     (p) =>
       p.trade_name.includes(searchQuery) ||
-      p.scientific_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      p.barcode.includes(searchQuery)
+      (p.scientific_name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (p.barcode || '').includes(searchQuery)
   );
 
   const addProduct = (product: Product) => {
@@ -52,7 +54,7 @@ export default function Purchases() {
 
   const handleBarcodeSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const product = mockProducts.find((p) => p.barcode === barcodeInput);
+    const product = products.find((p) => p.barcode === barcodeInput);
     if (product) { addProduct(product); setBarcodeInput(''); }
     else { toast({ title: 'غير موجود', description: 'لم يتم العثور على صنف بهذا الباركود', variant: 'destructive' }); }
   };
@@ -71,32 +73,48 @@ export default function Purchases() {
   const removeItem = (itemId: string) => setItems(items.filter((i) => i.id !== itemId));
   const total = items.reduce((sum, i) => sum + i.total, 0);
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!selectedSupplier) { toast({ title: 'خطأ', description: 'اختر المورد أولاً', variant: 'destructive' }); return; }
     if (items.length === 0) { toast({ title: 'خطأ', description: 'أضف أصنافاً أولاً', variant: 'destructive' }); return; }
-    const po = {
-      id: `PO-${Date.now()}`,
-      supplier_id: selectedSupplier.id,
-      supplier_name: selectedSupplier.name,
-      items: [...items],
-      total,
-      date: new Date().toISOString().split('T')[0],
-      status: 'completed' as const,
-    };
-    mockPurchaseOrders.push(po);
-    items.forEach((item) => {
-      const product = mockProducts.find((p) => p.id === item.product_id);
-      if (product) product.stock_quantity += item.quantity;
-    });
-    toast({ title: 'تم حفظ فاتورة المشتريات', description: `إجمالي ${total.toFixed(2)} ر.س من ${selectedSupplier.name}` });
-    setItems([]);
-    setSelectedSupplier(null);
+
+    try {
+      await createInvoice.mutateAsync({
+        invoice_type: 'purchase',
+        contact_id: selectedSupplier.id,
+        contact_name: selectedSupplier.name,
+        total,
+        paid: total,
+        status: 'completed',
+        payment_method: 'cash',
+        items: items.map(item => ({
+          product_id: item.product_id,
+          product_name: item.product_name,
+          quantity: item.quantity,
+          unit_price: item.unit_price,
+          total: item.total,
+        })),
+      });
+
+      for (const item of items) {
+        await updateStock.mutateAsync({ id: item.product_id, delta: item.quantity });
+      }
+
+      toast({ title: 'تم حفظ فاتورة المشتريات', description: `إجمالي ${total.toFixed(2)} ر.س من ${selectedSupplier.name}` });
+      setItems([]);
+      setSelectedSupplier(null);
+    } catch {
+      toast({ title: 'خطأ', description: 'فشل حفظ الفاتورة', variant: 'destructive' });
+    }
   };
 
   const handleSupplierSave = (supplier: Contact) => {
     setSelectedSupplier(supplier);
     setShowSupplierModal(false);
   };
+
+  if (loadingProducts) {
+    return <MainLayout title="المشتريات"><div className="flex items-center justify-center h-64"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div></MainLayout>;
+  }
 
   return (
     <MainLayout title="المشتريات">
@@ -105,9 +123,9 @@ export default function Purchases() {
           <div className="rounded-xl bg-card p-4 shadow-card">
             <div className="flex items-center gap-3 mb-3"><Truck className="h-5 w-5 text-primary" /><Label className="text-base font-semibold">المورد</Label></div>
             <div className="flex items-center gap-3">
-              <Select value={selectedSupplier?.id || ''} onValueChange={(v) => setSelectedSupplier(suppliers.find((s) => s.id === v) || null)}>
+              <Select value={selectedSupplier?.id || ''} onValueChange={(v) => setSelectedSupplier(allContacts.find((s) => s.id === v) || null)}>
                 <SelectTrigger className="flex-1"><SelectValue placeholder="اختر المورد..." /></SelectTrigger>
-                <SelectContent>{suppliers.map((s) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
+                <SelectContent>{allContacts.map((s) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
               </Select>
               <Button variant="outline" size="icon" onClick={() => setShowSupplierModal(true)}><UserPlus className="h-4 w-4" /></Button>
             </div>
@@ -184,7 +202,9 @@ export default function Purchases() {
                 <span className="text-3xl font-bold text-primary tabular-nums">{total.toFixed(2)} ر.س</span>
               </div>
             </div>
-            <Button size="lg" className="w-full gap-2" onClick={handleSave}><Save className="h-5 w-5" />حفظ فاتورة المشتريات</Button>
+            <Button size="lg" className="w-full gap-2" onClick={handleSave} disabled={createInvoice.isPending}>
+              {createInvoice.isPending ? <Loader2 className="h-5 w-5 animate-spin" /> : <><Save className="h-5 w-5" />حفظ فاتورة المشتريات</>}
+            </Button>
           </div>
         </div>
       </div>
