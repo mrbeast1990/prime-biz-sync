@@ -11,6 +11,9 @@ import {
   ChevronRight,
   ChevronLeft,
   Zap,
+  Shield,
+  UserCheck,
+  Truck,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -22,10 +25,13 @@ interface NavItem {
 
 const navItems: NavItem[] = [
   { title: 'لوحة التحكم', href: '/', icon: LayoutDashboard },
+  { title: 'البيع للتأمين', href: '/insurance-pos', icon: Shield },
   { title: 'البيع السريع', href: '/pos', icon: Zap },
   { title: 'المنتجات', href: '/products', icon: Package },
   { title: 'جهات الاتصال', href: '/contacts', icon: Users },
+  { title: 'عملاء التأمين', href: '/insurance-customers', icon: UserCheck },
   { title: 'الفواتير', href: '/invoices', icon: FileText },
+  { title: 'المشتريات', href: '/purchases', icon: Truck },
   { title: 'دفتر الحسابات', href: '/ledger', icon: BookOpen },
   { title: 'الإعدادات', href: '/settings', icon: Settings },
 ];

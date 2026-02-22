@@ -1,4 +1,4 @@
-import { Product, Contact, Invoice, LedgerEntry, DashboardStats } from '@/types';
+import { Product, Contact, Invoice, LedgerEntry, DashboardStats, InsuranceCustomer, InsuranceSale, PurchaseOrder } from '@/types';
 
 // Mock Products
 export const mockProducts: Product[] = [
@@ -215,3 +215,46 @@ export const getExpiringProducts = () => {
   threeMonthsFromNow.setMonth(threeMonthsFromNow.getMonth() + 3);
   return mockProducts.filter(p => new Date(p.expiryDate) <= threeMonthsFromNow);
 };
+
+// Mock Insurance Customers
+export const mockInsuranceCustomers: InsuranceCustomer[] = [
+  { id: '1', name: 'عبدالله سعيد', cardNumber: 'INS-001', phone: '0501112233', balance: 320.0, createdAt: '2024-11-01' },
+  { id: '2', name: 'نورة الحربي', cardNumber: 'INS-002', phone: '0559998877', balance: 150.0, createdAt: '2024-11-15' },
+  { id: '3', name: 'خالد العتيبي', cardNumber: 'INS-003', phone: '0534445566', balance: 0, createdAt: '2024-12-01' },
+];
+
+// Mock Insurance Sales
+export const mockInsuranceSales: InsuranceSale[] = [
+  {
+    id: 'IS-001',
+    customerId: '1',
+    customerName: 'عبدالله سعيد',
+    items: [],
+    total: 120.0,
+    date: '2024-12-20',
+  },
+  {
+    id: 'IS-002',
+    customerId: '2',
+    customerName: 'نورة الحربي',
+    items: [],
+    total: 85.0,
+    date: '2024-12-21',
+  },
+];
+
+// Mock Purchase Orders
+export const mockPurchaseOrders: PurchaseOrder[] = [
+  {
+    id: 'PO-001',
+    supplierId: '2',
+    supplierName: 'شركة الدواء المتحدة',
+    items: [
+      { id: '1', productId: '1', productName: 'بانادول إكسترا', quantity: 100, unitPrice: 8.5, total: 850 },
+      { id: '2', productId: '2', productName: 'أوجمنتين 625', quantity: 50, unitPrice: 45, total: 2250 },
+    ],
+    total: 3100,
+    date: '2024-12-15',
+    status: 'completed',
+  },
+];
