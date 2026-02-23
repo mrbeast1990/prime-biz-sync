@@ -2,15 +2,21 @@ import { useState, useRef, useEffect } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import {
   Barcode, Search, Plus, Minus, Trash2, CreditCard, Banknote, User, ShoppingCart, X,
-  RotateCcw, AlertTriangle, UserPlus, Loader2, ChevronDown,
+  RotateCcw, AlertTriangle, UserPlus, Loader2, ChevronDown, Zap, FileText, FileDown,
+  Eye, Edit, Save, ChevronRight, ChevronLeft,
 } from 'lucide-react';
 import { Product, CartItem, SaleMode } from '@/types';
 import { cn } from '@/lib/utils';
 import { toast } from '@/hooks/use-toast';
-import { useProducts, useContacts, useCreateInvoice, useUpdateProductStock } from '@/hooks/useSupabaseData';
+import { useProducts, useContacts, useCreateInvoice, useUpdateProductStock, useInvoices, useInvoiceItems, useUpdateInvoiceItem, useProfiles } from '@/hooks/useSupabaseData';
 import { supabase } from '@/integrations/supabase/client';
+import { exportToCSV, exportToPrintPDF } from '@/utils/exportUtils';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -31,7 +37,7 @@ async function generateInvoiceNumber(type: 'sale' | 'purchase' = 'sale') {
   const today = new Date().toISOString().slice(0, 10);
   const dateStr = today.replace(/-/g, '');
   const types = type === 'purchase' ? ['purchase'] : ['sale', 'return', 'damage'];
-  const { count, error } = await supabase
+  const { count } = await supabase
     .from('invoices')
     .select('*', { count: 'exact', head: true })
     .in('invoice_type', types)
@@ -39,6 +45,53 @@ async function generateInvoiceNumber(type: 'sale' | 'purchase' = 'sale') {
   const seq = String((count || 0) + 1).padStart(3, '0');
   return `${prefix}-${dateStr}-${seq}`;
 }
+
+// FEFO: deduct from batches with nearest expiry first
+async function deductFromBatches(productId: string, quantity: number) {
+  const { data: batches } = await supabase
+    .from('product_batches')
+    .select('*')
+    .eq('product_id', productId)
+    .gt('quantity', 0)
+    .order('expiry_date', { ascending: true, nullsFirst: false });
+
+  if (!batches) return;
+
+  let remaining = quantity;
+  for (const batch of batches) {
+    if (remaining <= 0) break;
+    const deduct = Math.min(remaining, batch.quantity);
+    await supabase
+      .from('product_batches')
+      .update({ quantity: batch.quantity - deduct })
+      .eq('id', batch.id);
+    remaining -= deduct;
+  }
+}
+
+// Reverse FEFO for returns: add back to most recent batch
+async function addToBatches(productId: string, quantity: number) {
+  const { data: batches } = await supabase
+    .from('product_batches')
+    .select('*')
+    .eq('product_id', productId)
+    .order('created_at', { ascending: false })
+    .limit(1);
+
+  if (batches && batches.length > 0) {
+    await supabase
+      .from('product_batches')
+      .update({ quantity: batches[0].quantity + quantity })
+      .eq('id', batches[0].id);
+  }
+}
+
+const paymentLabels: Record<string, string> = {
+  cash: 'نقدي', card: 'بطاقة', credit: 'آجل', damage: 'إتلاف',
+};
+const typeLabels: Record<string, string> = {
+  sale: 'بيع', return: 'استرجاع', damage: 'إتلاف',
+};
 
 export default function POS() {
   const { data: products = [], isLoading } = useProducts();
@@ -145,6 +198,12 @@ export default function POS() {
 
       for (const item of cart) {
         await updateStock.mutateAsync({ id: item.product.id, delta: stockDelta * item.quantity });
+        // FEFO batch deduction/addition
+        if (saleMode === 'return') {
+          await addToBatches(item.product.id, item.quantity);
+        } else {
+          await deductFromBatches(item.product.id, item.quantity);
+        }
       }
 
       const modeLabels: Record<SaleMode, string> = {
@@ -167,119 +226,331 @@ export default function POS() {
 
   return (
     <MainLayout title="البيع السريع">
-      <div className="grid h-[calc(100vh-8rem)] grid-cols-1 gap-6 lg:grid-cols-3">
-        <div className="lg:col-span-2 flex flex-col">
-          <form onSubmit={handleBarcodeSubmit} className="mb-4">
-            <div className="relative">
-              <Barcode className="absolute right-3 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
-              <Input ref={barcodeRef} value={barcodeInput} onChange={(e) => setBarcodeInput(e.target.value)} placeholder="امسح الباركود أو أدخل الكود..." className="pr-10 h-12 text-lg font-mono input-focus" />
-            </div>
-          </form>
-          <div className="relative mb-4">
-            <Search className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="بحث عن صنف..." className="pr-9 input-focus" />
-          </div>
-          <div className="flex-1 overflow-y-auto custom-scrollbar">
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
-              {filteredProducts.map((product) => (
-                <button key={product.id} onClick={() => addToCart(product)} disabled={product.stock_quantity === 0}
-                  className={cn('rounded-lg bg-card p-4 text-right shadow-card transition-all hover:shadow-md hover:scale-[1.02] active:scale-[0.98]', product.stock_quantity === 0 && 'opacity-50 cursor-not-allowed')}>
-                  <p className="font-medium text-card-foreground text-sm leading-tight">{product.trade_name}</p>
-                  <p className="mt-1 text-xs text-muted-foreground leading-tight">{product.scientific_name}</p>
-                  <div className="mt-2 flex items-center justify-between">
-                    <span className="text-lg font-bold text-primary tabular-nums">{product.sale_price.toFixed(2)}</span>
-                    <span className={cn('text-xs font-medium rounded-full px-2 py-0.5', product.stock_quantity <= product.min_stock ? 'bg-destructive/10 text-destructive' : 'bg-success/10 text-success')}>{product.stock_quantity}</span>
-                  </div>
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
+      <Tabs defaultValue="pos" dir="rtl">
+        <TabsList className="mb-4">
+          <TabsTrigger value="pos" className="gap-2"><Zap className="h-4 w-4" /> البيع السريع</TabsTrigger>
+          <TabsTrigger value="invoices" className="gap-2"><FileText className="h-4 w-4" /> فواتير صادرة</TabsTrigger>
+        </TabsList>
 
-        <div className="flex flex-col rounded-xl bg-card shadow-card">
-          <div className="flex items-center justify-between border-b border-border p-4">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10"><ShoppingCart className="h-5 w-5 text-primary" /></div>
-              <div><h2 className="font-semibold text-card-foreground">السلة</h2><p className="text-sm text-muted-foreground">{itemCount} صنف</p></div>
-            </div>
-            {cart.length > 0 && <Button variant="ghost" size="icon" onClick={clearCart}><X className="h-4 w-4" /></Button>}
-          </div>
-          <div className="flex-1 overflow-y-auto custom-scrollbar p-4">
-            {cart.length === 0 ? (
-              <div className="flex h-full flex-col items-center justify-center text-center">
-                <ShoppingCart className="h-12 w-12 text-muted-foreground/50" />
-                <p className="mt-4 text-muted-foreground">السلة فارغة</p>
-                <p className="text-sm text-muted-foreground">امسح الكود أو اختر صنفاً</p>
+        <TabsContent value="pos">
+          <div className="grid h-[calc(100vh-12rem)] grid-cols-1 gap-6 lg:grid-cols-3">
+            <div className="lg:col-span-2 flex flex-col">
+              <form onSubmit={handleBarcodeSubmit} className="mb-4">
+                <div className="relative">
+                  <Barcode className="absolute right-3 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
+                  <Input ref={barcodeRef} value={barcodeInput} onChange={(e) => setBarcodeInput(e.target.value)} placeholder="امسح الباركود أو أدخل الكود..." className="pr-10 h-12 text-lg font-mono input-focus" />
+                </div>
+              </form>
+              <div className="relative mb-4">
+                <Search className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="بحث عن صنف..." className="pr-9 input-focus" />
               </div>
-            ) : (
-              <div className="space-y-3">
-                {cart.map((item) => (
-                  <div key={item.product.id} className="rounded-lg bg-muted/50 p-3">
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <p className="font-medium text-card-foreground">{item.product.trade_name}</p>
-                        <p className="text-sm text-muted-foreground">{item.product.sale_price.toFixed(2)} د.ل</p>
+              <div className="flex-1 overflow-y-auto custom-scrollbar">
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
+                  {filteredProducts.map((product) => (
+                    <button key={product.id} onClick={() => addToCart(product)} disabled={product.stock_quantity === 0}
+                      className={cn('rounded-lg bg-card p-4 text-right shadow-card transition-all hover:shadow-md hover:scale-[1.02] active:scale-[0.98]', product.stock_quantity === 0 && 'opacity-50 cursor-not-allowed')}>
+                      <p className="font-medium text-card-foreground text-sm leading-tight">{product.trade_name}</p>
+                      <p className="mt-1 text-xs text-muted-foreground leading-tight">{product.scientific_name}</p>
+                      <div className="mt-2 flex items-center justify-between">
+                        <span className="text-lg font-bold text-primary tabular-nums">{product.sale_price.toFixed(2)}</span>
+                        <span className={cn('text-xs font-medium rounded-full px-2 py-0.5', product.stock_quantity <= product.min_stock ? 'bg-destructive/10 text-destructive' : 'bg-success/10 text-success')}>{product.stock_quantity}</span>
                       </div>
-                      <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive hover:text-destructive" onClick={() => removeFromCart(item.product.id)}><Trash2 className="h-3 w-3" /></Button>
-                    </div>
-                    <div className="mt-2 flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => updateQuantity(item.product.id, -1)}><Minus className="h-3 w-3" /></Button>
-                        <span className="w-8 text-center font-medium tabular-nums">{item.quantity}</span>
-                        <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => updateQuantity(item.product.id, 1)}><Plus className="h-3 w-3" /></Button>
-                      </div>
-                      <p className="font-bold text-card-foreground tabular-nums">{item.total.toFixed(2)} د.ل</p>
-                    </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="flex flex-col rounded-xl bg-card shadow-card">
+              <div className="flex items-center justify-between border-b border-border p-4">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10"><ShoppingCart className="h-5 w-5 text-primary" /></div>
+                  <div><h2 className="font-semibold text-card-foreground">السلة</h2><p className="text-sm text-muted-foreground">{itemCount} صنف</p></div>
+                </div>
+                {cart.length > 0 && <Button variant="ghost" size="icon" onClick={clearCart}><X className="h-4 w-4" /></Button>}
+              </div>
+              <div className="flex-1 overflow-y-auto custom-scrollbar p-4">
+                {cart.length === 0 ? (
+                  <div className="flex h-full flex-col items-center justify-center text-center">
+                    <ShoppingCart className="h-12 w-12 text-muted-foreground/50" />
+                    <p className="mt-4 text-muted-foreground">السلة فارغة</p>
+                    <p className="text-sm text-muted-foreground">امسح الكود أو اختر صنفاً</p>
                   </div>
-                ))}
+                ) : (
+                  <div className="space-y-3">
+                    {cart.map((item) => (
+                      <div key={item.product.id} className="rounded-lg bg-muted/50 p-3">
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <p className="font-medium text-card-foreground">{item.product.trade_name}</p>
+                            <p className="text-sm text-muted-foreground">{item.product.sale_price.toFixed(2)} د.ل</p>
+                          </div>
+                          <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive hover:text-destructive" onClick={() => removeFromCart(item.product.id)}><Trash2 className="h-3 w-3" /></Button>
+                        </div>
+                        <div className="mt-2 flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => updateQuantity(item.product.id, -1)}><Minus className="h-3 w-3" /></Button>
+                            <span className="w-8 text-center font-medium tabular-nums">{item.quantity}</span>
+                            <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => updateQuantity(item.product.id, 1)}><Plus className="h-3 w-3" /></Button>
+                          </div>
+                          <p className="font-bold text-card-foreground tabular-nums">{item.total.toFixed(2)} د.ل</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
-            )}
-          </div>
-          <div className="border-t border-border p-4 space-y-3">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant={saleMode === 'damage' ? 'destructive' : 'default'} className="w-full gap-2 justify-between">
-                  <span className="flex items-center gap-2">
-                    {(() => { const current = saleModes.find(m => m.mode === saleMode); const Icon = current!.icon; return <><Icon className="h-4 w-4" />{current!.label}</>; })()}
-                  </span>
-                  <ChevronDown className="h-4 w-4" />
+              <div className="border-t border-border p-4 space-y-3">
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant={saleMode === 'damage' ? 'destructive' : 'default'} className="w-full gap-2 justify-between">
+                      <span className="flex items-center gap-2">
+                        {(() => { const current = saleModes.find(m => m.mode === saleMode); const Icon = current!.icon; return <><Icon className="h-4 w-4" />{current!.label}</>; })()}
+                      </span>
+                      <ChevronDown className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent className="w-[var(--radix-dropdown-menu-trigger-width)] bg-popover" align="start">
+                    {saleModes.map(({ mode, label, icon: Icon }) => (
+                      <DropdownMenuItem key={mode} onClick={() => setSaleMode(mode)} className={cn('gap-2 cursor-pointer', saleMode === mode && 'bg-accent')}>
+                        <Icon className="h-4 w-4" />{label}
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+                {saleMode === 'credit' && (
+                  <div className="relative">
+                    <User className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                    <Input value={customerName} onChange={(e) => setCustomerName(e.target.value)} placeholder="اسم الزبون..." className="pr-9 input-focus" list="customers-list" />
+                    <datalist id="customers-list">{contacts.map(c => <option key={c.id} value={c.name} />)}</datalist>
+                  </div>
+                )}
+                <div className="rounded-lg bg-primary/10 p-4">
+                  <div className="flex items-center justify-between">
+                    <span className="text-muted-foreground">الإجمالي</span>
+                    <span className="text-3xl font-bold text-primary tabular-nums">{total.toFixed(2)} د.ل</span>
+                  </div>
+                </div>
+                <Button size="lg" className={cn('w-full gap-2', saleMode === 'damage' && 'bg-destructive hover:bg-destructive/90')} onClick={handleCheckout} disabled={createInvoice.isPending}>
+                  {createInvoice.isPending ? <Loader2 className="h-5 w-5 animate-spin" /> : (
+                    <>
+                      {saleMode === 'cash' && <><Banknote className="h-5 w-5" />تأكيد البيع نقداً</>}
+                      {saleMode === 'card' && <><CreditCard className="h-5 w-5" />تأكيد البيع بالبطاقة</>}
+                      {saleMode === 'credit' && <><UserPlus className="h-5 w-5" />تسجيل بيع آجل</>}
+                      {saleMode === 'return' && <><RotateCcw className="h-5 w-5" />تأكيد الاسترجاع</>}
+                      {saleMode === 'damage' && <><AlertTriangle className="h-5 w-5" />تسجيل الإتلاف</>}
+                    </>
+                  )}
                 </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent className="w-[var(--radix-dropdown-menu-trigger-width)] bg-popover" align="start">
-                {saleModes.map(({ mode, label, icon: Icon }) => (
-                  <DropdownMenuItem key={mode} onClick={() => setSaleMode(mode)} className={cn('gap-2 cursor-pointer', saleMode === mode && 'bg-accent')}>
-                    <Icon className="h-4 w-4" />{label}
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
-            {saleMode === 'credit' && (
-              <div className="relative">
-                <User className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <Input value={customerName} onChange={(e) => setCustomerName(e.target.value)} placeholder="اسم الزبون..." className="pr-9 input-focus" list="customers-list" />
-                <datalist id="customers-list">{contacts.map(c => <option key={c.id} value={c.name} />)}</datalist>
-              </div>
-            )}
-            <div className="rounded-lg bg-primary/10 p-4">
-              <div className="flex items-center justify-between">
-                <span className="text-muted-foreground">الإجمالي</span>
-                <span className="text-3xl font-bold text-primary tabular-nums">{total.toFixed(2)} د.ل</span>
               </div>
             </div>
-            <Button size="lg" className={cn('w-full gap-2', saleMode === 'damage' && 'bg-destructive hover:bg-destructive/90')} onClick={handleCheckout} disabled={createInvoice.isPending}>
-              {createInvoice.isPending ? <Loader2 className="h-5 w-5 animate-spin" /> : (
-                <>
-                  {saleMode === 'cash' && <><Banknote className="h-5 w-5" />تأكيد البيع نقداً</>}
-                  {saleMode === 'card' && <><CreditCard className="h-5 w-5" />تأكيد البيع بالبطاقة</>}
-                  {saleMode === 'credit' && <><UserPlus className="h-5 w-5" />تسجيل بيع آجل</>}
-                  {saleMode === 'return' && <><RotateCcw className="h-5 w-5" />تأكيد الاسترجاع</>}
-                  {saleMode === 'damage' && <><AlertTriangle className="h-5 w-5" />تسجيل الإتلاف</>}
-                </>
-              )}
-            </Button>
           </div>
+        </TabsContent>
+
+        <TabsContent value="invoices">
+          <IssuedInvoicesTab />
+        </TabsContent>
+      </Tabs>
+    </MainLayout>
+  );
+}
+
+// ===== Issued Invoices Tab (formerly Sales page) =====
+
+function IssuedInvoicesTab() {
+  const { data: allInvoices = [], isLoading } = useInvoices();
+  const { data: profiles = [] } = useProfiles();
+  const [searchQuery, setSearchQuery] = useState('');
+  const [viewInvoiceId, setViewInvoiceId] = useState<string | null>(null);
+  const [editInvoiceId, setEditInvoiceId] = useState<string | null>(null);
+  const [selectedDate, setSelectedDate] = useState(() => new Date().toISOString().slice(0, 10));
+
+  const salesInvoices = allInvoices.filter(i => ['sale', 'return', 'damage'].includes(i.invoice_type));
+  const dateFiltered = salesInvoices.filter(inv => inv.invoice_date === selectedDate);
+  const filtered = dateFiltered.filter(inv =>
+    (inv.invoice_number || '').includes(searchQuery) ||
+    (inv.contact_name || '').includes(searchQuery) ||
+    (inv.payment_method || '').includes(searchQuery)
+  );
+
+  const navigateDate = (delta: number) => {
+    const d = new Date(selectedDate);
+    d.setDate(d.getDate() + delta);
+    setSelectedDate(d.toISOString().slice(0, 10));
+  };
+
+  const isToday = selectedDate === new Date().toISOString().slice(0, 10);
+
+  const getSellerName = (userId: string | null) => {
+    if (!userId) return '—';
+    const profile = profiles.find((p: any) => p.user_id === userId);
+    return profile?.display_name || '—';
+  };
+
+  const handleExportCSV = () => {
+    exportToCSV(filtered.map(inv => ({
+      'رقم الفاتورة': inv.invoice_number || '—',
+      'التاريخ': new Date(inv.invoice_date).toLocaleDateString('ar-SA'),
+      'نوع العملية': typeLabels[inv.invoice_type] || inv.invoice_type,
+      'طريقة الدفع': paymentLabels[inv.payment_method || ''] || inv.payment_method,
+      'الإجمالي': Number(inv.total).toFixed(2),
+      'البائع': getSellerName(inv.created_by),
+    })), 'فواتير_صادرة');
+    toast({ title: 'تم التصدير' });
+  };
+
+  if (isLoading) {
+    return <div className="flex items-center justify-center h-64"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="icon" className="h-9 w-9" onClick={() => navigateDate(-1)}>
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+          <Input type="date" value={selectedDate} onChange={e => setSelectedDate(e.target.value)} className="w-[160px] text-center" />
+          <Button variant="outline" size="icon" className="h-9 w-9" onClick={() => navigateDate(1)} disabled={isToday}>
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+          {!isToday && <Button variant="ghost" size="sm" onClick={() => setSelectedDate(new Date().toISOString().slice(0, 10))}>اليوم</Button>}
+        </div>
+        <div className="relative max-w-sm flex-1">
+          <Search className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="بحث برقم الفاتورة أو الاسم..." className="pr-9" />
+        </div>
+        <div className="flex gap-2">
+          <Button variant="outline" size="sm" onClick={handleExportCSV}><FileDown className="h-4 w-4 ml-1" /> Excel</Button>
+          <Button variant="outline" size="sm" onClick={() => exportToPrintPDF('فواتير صادرة', 'sales-table')}><FileText className="h-4 w-4 ml-1" /> PDF</Button>
         </div>
       </div>
-    </MainLayout>
+
+      <div className="rounded-xl bg-card shadow-card overflow-hidden">
+        <Table id="sales-table">
+          <TableHeader>
+            <TableRow>
+              <TableHead className="text-right">رقم الفاتورة</TableHead>
+              <TableHead className="text-right">التاريخ</TableHead>
+              <TableHead className="text-right">نوع العملية</TableHead>
+              <TableHead className="text-right">طريقة الدفع</TableHead>
+              <TableHead className="text-right">الزبون</TableHead>
+              <TableHead className="text-right">الإجمالي</TableHead>
+              <TableHead className="text-right">البائع</TableHead>
+              <TableHead className="text-right">إجراءات</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {filtered.map(inv => (
+              <TableRow key={inv.id}>
+                <TableCell className="font-mono text-sm">{inv.invoice_number || '—'}</TableCell>
+                <TableCell>{new Date(inv.invoice_date).toLocaleDateString('ar-SA')}</TableCell>
+                <TableCell>
+                  <span className={cn('inline-block rounded-full px-2 py-0.5 text-xs font-medium',
+                    inv.invoice_type === 'sale' ? 'bg-success/10 text-success' :
+                    inv.invoice_type === 'return' ? 'bg-warning/10 text-warning' : 'bg-destructive/10 text-destructive'
+                  )}>
+                    {typeLabels[inv.invoice_type] || inv.invoice_type}
+                  </span>
+                </TableCell>
+                <TableCell>{paymentLabels[inv.payment_method || ''] || inv.payment_method}</TableCell>
+                <TableCell>{inv.contact_name || '—'}</TableCell>
+                <TableCell className="tabular-nums font-medium">{Number(inv.total).toFixed(2)} د.ل</TableCell>
+                <TableCell>{getSellerName(inv.created_by)}</TableCell>
+                <TableCell>
+                  <div className="flex gap-1">
+                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setViewInvoiceId(inv.id)}><Eye className="h-3.5 w-3.5" /></Button>
+                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setEditInvoiceId(inv.id)}><Edit className="h-3.5 w-3.5" /></Button>
+                  </div>
+                </TableCell>
+              </TableRow>
+            ))}
+            {filtered.length === 0 && <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">لا توجد فواتير صادرة</TableCell></TableRow>}
+          </TableBody>
+        </Table>
+      </div>
+
+      <InvoiceViewDialog invoiceId={viewInvoiceId} onClose={() => setViewInvoiceId(null)} />
+      <InvoiceEditDialog invoiceId={editInvoiceId} onClose={() => setEditInvoiceId(null)} />
+    </div>
+  );
+}
+
+function InvoiceViewDialog({ invoiceId, onClose }: { invoiceId: string | null; onClose: () => void }) {
+  const { data: items = [] } = useInvoiceItems(invoiceId || undefined);
+  return (
+    <Dialog open={!!invoiceId} onOpenChange={() => onClose()}>
+      <DialogContent className="sm:max-w-lg">
+        <DialogHeader><DialogTitle>تفاصيل الفاتورة</DialogTitle></DialogHeader>
+        <Table>
+          <TableHeader><TableRow>
+            <TableHead className="text-right">الصنف</TableHead>
+            <TableHead className="text-right">الكمية</TableHead>
+            <TableHead className="text-right">السعر</TableHead>
+            <TableHead className="text-right">الإجمالي</TableHead>
+          </TableRow></TableHeader>
+          <TableBody>
+            {items.map((item: any) => (
+              <TableRow key={item.id}>
+                <TableCell>{item.product_name}</TableCell>
+                <TableCell className="tabular-nums">{item.quantity}</TableCell>
+                <TableCell className="tabular-nums">{Number(item.unit_price).toFixed(2)}</TableCell>
+                <TableCell className="tabular-nums font-medium">{Number(item.total).toFixed(2)} د.ل</TableCell>
+              </TableRow>
+            ))}
+            {items.length === 0 && <TableRow><TableCell colSpan={4} className="text-center py-4 text-muted-foreground">لا توجد أصناف</TableCell></TableRow>}
+          </TableBody>
+        </Table>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function InvoiceEditDialog({ invoiceId, onClose }: { invoiceId: string | null; onClose: () => void }) {
+  const { data: items = [] } = useInvoiceItems(invoiceId || undefined);
+  const updateItem = useUpdateInvoiceItem();
+  const [editedItems, setEditedItems] = useState<Record<string, { quantity: number; unit_price: number }>>({});
+
+  const getItemValue = (item: any, field: 'quantity' | 'unit_price') => editedItems[item.id]?.[field] ?? item[field];
+
+  const handleChange = (itemId: string, field: 'quantity' | 'unit_price', value: number) => {
+    setEditedItems(prev => ({ ...prev, [itemId]: { quantity: prev[itemId]?.quantity ?? 0, unit_price: prev[itemId]?.unit_price ?? 0, [field]: value } }));
+  };
+
+  const handleSave = async () => {
+    try {
+      for (const [id, data] of Object.entries(editedItems)) {
+        await updateItem.mutateAsync({ id, quantity: data.quantity, unit_price: data.unit_price, total: data.quantity * data.unit_price });
+      }
+      toast({ title: 'تم الحفظ', description: 'تم تعديل الفاتورة بنجاح' });
+      setEditedItems({});
+      onClose();
+    } catch {
+      toast({ title: 'خطأ', description: 'فشل تعديل الفاتورة', variant: 'destructive' });
+    }
+  };
+
+  return (
+    <Dialog open={!!invoiceId} onOpenChange={() => { setEditedItems({}); onClose(); }}>
+      <DialogContent className="sm:max-w-lg">
+        <DialogHeader><DialogTitle>تعديل الفاتورة</DialogTitle></DialogHeader>
+        <div className="space-y-3">
+          {items.map((item: any) => (
+            <div key={item.id} className="rounded-lg bg-muted/50 p-3">
+              <p className="font-medium text-sm mb-2">{item.product_name}</p>
+              <div className="grid grid-cols-2 gap-2">
+                <div><Label className="text-xs">الكمية</Label><Input type="number" value={getItemValue(item, 'quantity')} onChange={e => handleChange(item.id, 'quantity', Math.max(1, +e.target.value))} className="h-8 text-sm" /></div>
+                <div><Label className="text-xs">السعر</Label><Input type="number" value={getItemValue(item, 'unit_price')} onChange={e => handleChange(item.id, 'unit_price', Math.max(0, +e.target.value))} className="h-8 text-sm" /></div>
+              </div>
+            </div>
+          ))}
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => { setEditedItems({}); onClose(); }}>إلغاء</Button>
+          <Button onClick={handleSave} disabled={updateItem.isPending}><Save className="h-4 w-4 ml-1" /> حفظ التعديلات</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

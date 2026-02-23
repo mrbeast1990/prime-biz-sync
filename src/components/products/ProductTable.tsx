@@ -17,13 +17,7 @@ interface ProductTableProps {
 
 export function ProductTable({ products, onEdit, onDelete }: ProductTableProps) {
   const isLowStock = (product: Product) => product.stock_quantity <= product.min_stock;
-  const isExpiringSoon = (product: Product) => {
-    if (!product.has_expiry) return false;
-    const expiryDate = new Date(product.expiry_date);
-    const threeMonthsFromNow = new Date();
-    threeMonthsFromNow.setMonth(threeMonthsFromNow.getMonth() + 3);
-    return expiryDate <= threeMonthsFromNow;
-  };
+  // Expiry is now tracked per batch, not per product
 
   return (
     <div className="rounded-xl bg-card shadow-card overflow-hidden">
@@ -61,7 +55,7 @@ export function ProductTable({ products, onEdit, onDelete }: ProductTableProps) 
                     )}
                     <div>
                       <span className="font-medium text-card-foreground">{product.trade_name}</span>
-                      {(isLowStock(product) || isExpiringSoon(product)) && (
+                    {isLowStock(product) && (
                         <AlertTriangle className="inline-block mr-1 h-4 w-4 text-warning" />
                       )}
                     </div>
@@ -89,15 +83,8 @@ export function ProductTable({ products, onEdit, onDelete }: ProductTableProps) 
                 <td className="px-4 py-3 tabular-nums font-medium text-card-foreground">{product.sale_price.toFixed(2)} د.ل</td>
                 <td className="px-4 py-3">
                   {product.has_expiry ? (
-                    <span
-                      className={cn(
-                        'inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium',
-                        isExpiringSoon(product)
-                          ? 'bg-warning/10 text-warning'
-                          : 'bg-muted text-muted-foreground'
-                      )}
-                    >
-                      {new Date(product.expiry_date).toLocaleDateString('ar-SA')}
+                    <span className="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium bg-muted text-muted-foreground">
+                      خاضع للصلاحية
                     </span>
                   ) : (
                     <span className="text-xs text-muted-foreground">—</span>

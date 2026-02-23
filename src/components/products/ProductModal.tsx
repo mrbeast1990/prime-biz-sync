@@ -73,7 +73,6 @@ export function ProductModal({ isOpen, onClose, onSave, product }: ProductModalP
     packaging_type: 'علبة',
     units_per_package: 1,
     has_expiry: true,
-    expiry_date: '',
     image_url: '',
     stock_quantity: 0,
     min_stock: 10,
@@ -91,7 +90,6 @@ export function ProductModal({ isOpen, onClose, onSave, product }: ProductModalP
         packaging_type: product.packaging_type || 'علبة',
         units_per_package: product.units_per_package || 1,
         has_expiry: product.has_expiry ?? true,
-        expiry_date: product.expiry_date,
         image_url: product.image_url || '',
         stock_quantity: product.stock_quantity,
         min_stock: product.min_stock,
@@ -107,7 +105,6 @@ export function ProductModal({ isOpen, onClose, onSave, product }: ProductModalP
         packaging_type: 'علبة',
         units_per_package: 1,
         has_expiry: true,
-        expiry_date: '',
         image_url: '',
         stock_quantity: 0,
         min_stock: 10,
@@ -259,28 +256,14 @@ export function ProductModal({ isOpen, onClose, onSave, product }: ProductModalP
           </div>
 
           {/* الصلاحية */}
-          <div className="grid grid-cols-2 gap-4 items-end">
-            <div className="flex items-center gap-3">
-              <Switch
-                id="has_expiry"
-                checked={formData.has_expiry}
-                onCheckedChange={(checked) => setFormData({ ...formData, has_expiry: checked })}
-              />
-              <Label htmlFor="has_expiry">خاضع لصلاحية</Label>
-            </div>
-            {formData.has_expiry && (
-              <div className="space-y-2">
-                <Label htmlFor="expiry_date">تاريخ الانتهاء</Label>
-                <Input
-                  id="expiry_date"
-                  type="date"
-                  value={formData.expiry_date}
-                  onChange={(e) => setFormData({ ...formData, expiry_date: e.target.value })}
-                  className="input-focus"
-                  required
-                />
-              </div>
-            )}
+          <div className="flex items-center gap-3">
+            <Switch
+              id="has_expiry"
+              checked={formData.has_expiry}
+              onCheckedChange={(checked) => setFormData({ ...formData, has_expiry: checked })}
+            />
+            <Label htmlFor="has_expiry">خاضع لصلاحية</Label>
+            <span className="text-xs text-muted-foreground">(يتم تحديد تاريخ الصلاحية عند الشراء)</span>
           </div>
 
           {/* صورة الصنف */}

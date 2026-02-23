@@ -317,6 +317,51 @@ export type Database = {
           },
         ]
       }
+      product_batches: {
+        Row: {
+          created_at: string
+          expiry_date: string | null
+          id: string
+          invoice_id: string | null
+          original_quantity: number
+          product_id: string
+          quantity: number
+        }
+        Insert: {
+          created_at?: string
+          expiry_date?: string | null
+          id?: string
+          invoice_id?: string | null
+          original_quantity?: number
+          product_id: string
+          quantity?: number
+        }
+        Update: {
+          created_at?: string
+          expiry_date?: string | null
+          id?: string
+          invoice_id?: string | null
+          original_quantity?: number
+          product_id?: string
+          quantity?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_batches_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_batches_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       products: {
         Row: {
           barcode: string | null
