@@ -26,11 +26,18 @@ const saleModes: { mode: SaleMode; label: string; icon: React.ElementType; varia
   { mode: 'damage', label: 'إتلاف', icon: AlertTriangle, variant: 'destructive' },
 ];
 
-function generateInvoiceNumber() {
-  const now = new Date();
-  const date = now.toISOString().slice(0, 10).replace(/-/g, '');
-  const rand = String(Math.floor(Math.random() * 999) + 1).padStart(3, '0');
-  return `INV-${date}-${rand}`;
+async function generateInvoiceNumber(type: 'sale' | 'purchase' = 'sale') {
+  const prefix = type === 'purchase' ? 'PUR' : 'INV';
+  const today = new Date().toISOString().slice(0, 10);
+  const dateStr = today.replace(/-/g, '');
+  const types = type === 'purchase' ? ['purchase'] : ['sale', 'return', 'damage'];
+  const { count, error } = await supabase
+    .from('invoices')
+    .select('*', { count: 'exact', head: true })
+    .in('invoice_type', types)
+    .eq('invoice_date', today);
+  const seq = String((count || 0) + 1).padStart(3, '0');
+  return `${prefix}-${dateStr}-${seq}`;
 }
 
 export default function POS() {
@@ -116,7 +123,7 @@ export default function POS() {
       const { data: { user } } = await supabase.auth.getUser();
       const invoiceType = saleMode === 'return' ? 'return' : saleMode === 'damage' ? 'damage' : 'sale';
       const stockDelta = saleMode === 'return' ? 1 : -1;
-      const invoiceNumber = generateInvoiceNumber();
+      const invoiceNumber = await generateInvoiceNumber('sale');
 
       await createInvoice.mutateAsync({
         invoice_type: invoiceType,

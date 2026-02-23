@@ -210,7 +210,17 @@ function SellerDetail({ userId, profiles, invoices, view, onBack, onEdit }: {
   onEdit: (id: string) => void;
 }) {
   const profile = profiles.find((p: any) => p.user_id === userId);
-  const sellerInvoices = invoices.filter((i: any) => i.created_by === userId && ['sale', 'return', 'damage', 'purchase'].includes(i.invoice_type));
+  const allSellerInvoices = invoices.filter((i: any) => i.created_by === userId && ['sale', 'return', 'damage', 'purchase'].includes(i.invoice_type));
+  
+  // Date range filter for detail view
+  const today = new Date().toISOString().slice(0, 10);
+  const monthStart = today.slice(0, 8) + '01';
+  const [dateFrom, setDateFrom] = useState(monthStart);
+  const [dateTo, setDateTo] = useState(today);
+  
+  const sellerInvoices = view === 'detail' 
+    ? allSellerInvoices.filter((i: any) => i.invoice_date >= dateFrom && i.invoice_date <= dateTo)
+    : allSellerInvoices;
   const sales = sellerInvoices.filter((i: any) => i.invoice_type === 'sale');
   const purchases = sellerInvoices.filter((i: any) => i.invoice_type === 'purchase');
   const salesTotal = sales.reduce((s: number, i: any) => s + Number(i.total), 0);
@@ -233,7 +243,12 @@ function SellerDetail({ userId, profiles, invoices, view, onBack, onEdit }: {
         </div>
       ) : (
         <div className="rounded-xl bg-card shadow-card overflow-hidden">
-          <div className="p-3 flex gap-2 justify-end border-b">
+          <div className="p-3 flex items-center gap-3 flex-wrap border-b">
+            <Label className="text-sm">من:</Label>
+            <Input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} className="w-[150px] h-8 text-sm" />
+            <Label className="text-sm">إلى:</Label>
+            <Input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} className="w-[150px] h-8 text-sm" />
+            <div className="flex-1" />
             <Button variant="outline" size="sm" onClick={() => {
               exportToCSV(sellerInvoices.map((inv: any) => ({
                 'رقم الفاتورة': inv.invoice_number || '—',
