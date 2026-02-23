@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { Search, Eye, Edit, FileDown, FileText, Save, Loader2, ChevronDown, ShoppingCart } from 'lucide-react';
+import { Search, Eye, Edit, FileDown, FileText, Save, Loader2, ChevronDown, ShoppingCart, ChevronRight, ChevronLeft } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from '@/hooks/use-toast';
 import { useInvoices, useInvoiceItems, useUpdateInvoiceItem, useProfiles } from '@/hooks/useSupabaseData';
@@ -24,14 +24,25 @@ export default function Sales() {
   const [searchQuery, setSearchQuery] = useState('');
   const [viewInvoiceId, setViewInvoiceId] = useState<string | null>(null);
   const [editInvoiceId, setEditInvoiceId] = useState<string | null>(null);
+  const [selectedDate, setSelectedDate] = useState(() => new Date().toISOString().slice(0, 10));
 
   const salesInvoices = allInvoices.filter(i => ['sale', 'return', 'damage'].includes(i.invoice_type));
   
-  const filtered = salesInvoices.filter(inv =>
+  const dateFiltered = salesInvoices.filter(inv => inv.invoice_date === selectedDate);
+  
+  const filtered = dateFiltered.filter(inv =>
     (inv.invoice_number || '').includes(searchQuery) ||
     (inv.contact_name || '').includes(searchQuery) ||
     (inv.payment_method || '').includes(searchQuery)
   );
+
+  const navigateDate = (delta: number) => {
+    const d = new Date(selectedDate);
+    d.setDate(d.getDate() + delta);
+    setSelectedDate(d.toISOString().slice(0, 10));
+  };
+
+  const isToday = selectedDate === new Date().toISOString().slice(0, 10);
 
   const getSellerName = (userId: string | null) => {
     if (!userId) return '—';
@@ -59,6 +70,16 @@ export default function Sales() {
     <MainLayout title="المبيعات">
       <div className="space-y-4">
         <div className="flex items-center justify-between flex-wrap gap-3">
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="icon" className="h-9 w-9" onClick={() => navigateDate(-1)}>
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+            <Input type="date" value={selectedDate} onChange={e => setSelectedDate(e.target.value)} className="w-[160px] text-center" />
+            <Button variant="outline" size="icon" className="h-9 w-9" onClick={() => navigateDate(1)} disabled={isToday}>
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            {!isToday && <Button variant="ghost" size="sm" onClick={() => setSelectedDate(new Date().toISOString().slice(0, 10))}>اليوم</Button>}
+          </div>
           <div className="relative max-w-sm flex-1">
             <Search className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="بحث برقم الفاتورة أو الاسم..." className="pr-9" />

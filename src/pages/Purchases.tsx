@@ -102,11 +102,21 @@ export default function Purchases() {
 
     try {
       const { data: { user } } = await supabase.auth.getUser();
+      // Generate system purchase number
+      const today = new Date().toISOString().slice(0, 10);
+      const dateStr = today.replace(/-/g, '');
+      const { count } = await supabase
+        .from('invoices')
+        .select('*', { count: 'exact', head: true })
+        .eq('invoice_type', 'purchase')
+        .eq('invoice_date', today);
+      const sysNumber = `PUR-${dateStr}-${String((count || 0) + 1).padStart(3, '0')}`;
+
       await createInvoice.mutateAsync({
         invoice_type: 'purchase',
         contact_id: selectedSupplier.id,
         contact_name: selectedSupplier.name,
-        invoice_number: invoiceNumber.trim(),
+        invoice_number: `${sysNumber} | ${invoiceNumber.trim()}`,
         created_by: user?.id,
         total,
         paid: total,
