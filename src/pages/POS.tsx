@@ -10,6 +10,7 @@ import { Product, CartItem, SaleMode } from '@/types';
 import { cn } from '@/lib/utils';
 import { toast } from '@/hooks/use-toast';
 import { useProducts, useContacts, useCreateInvoice, useUpdateProductStock } from '@/hooks/useSupabaseData';
+import { supabase } from '@/integrations/supabase/client';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -24,6 +25,13 @@ const saleModes: { mode: SaleMode; label: string; icon: React.ElementType; varia
   { mode: 'return', label: 'استرجاع', icon: RotateCcw, variant: 'outline' },
   { mode: 'damage', label: 'إتلاف', icon: AlertTriangle, variant: 'destructive' },
 ];
+
+function generateInvoiceNumber() {
+  const now = new Date();
+  const date = now.toISOString().slice(0, 10).replace(/-/g, '');
+  const rand = String(Math.floor(Math.random() * 999) + 1).padStart(3, '0');
+  return `INV-${date}-${rand}`;
+}
 
 export default function POS() {
   const { data: products = [], isLoading } = useProducts();
@@ -105,12 +113,16 @@ export default function POS() {
     }
 
     try {
+      const { data: { user } } = await supabase.auth.getUser();
       const invoiceType = saleMode === 'return' ? 'return' : saleMode === 'damage' ? 'damage' : 'sale';
       const stockDelta = saleMode === 'return' ? 1 : -1;
+      const invoiceNumber = generateInvoiceNumber();
 
       await createInvoice.mutateAsync({
         invoice_type: invoiceType,
         contact_name: saleMode === 'credit' ? customerName : undefined,
+        invoice_number: invoiceNumber,
+        created_by: user?.id,
         total,
         paid: saleMode === 'credit' ? 0 : total,
         status: saleMode === 'credit' ? 'pending' : 'completed',
@@ -124,7 +136,6 @@ export default function POS() {
         })),
       });
 
-      // Update stock for each item
       for (const item of cart) {
         await updateStock.mutateAsync({ id: item.product.id, delta: stockDelta * item.quantity });
       }
@@ -134,7 +145,7 @@ export default function POS() {
       };
       toast({
         title: saleMode === 'return' ? 'تم الاسترجاع' : saleMode === 'damage' ? 'تم تسجيل الإتلاف' : 'تم البيع بنجاح',
-        description: `${modeLabels[saleMode]} بقيمة ${total.toFixed(2)} د.ل`,
+        description: `${modeLabels[saleMode]} - فاتورة ${invoiceNumber} بقيمة ${total.toFixed(2)} د.ل`,
       });
       clearCart();
       setCustomerName('');

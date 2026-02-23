@@ -250,6 +250,18 @@ export function useInvoiceItems(invoiceId?: string) {
   });
 }
 
+// Profiles (for seller safes)
+export function useProfiles() {
+  return useQuery({
+    queryKey: ['profiles'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('profiles').select('*');
+      if (error) throw error;
+      return data || [];
+    },
+  });
+}
+
 // Treasury
 export function useTreasuryEntries() {
   return useQuery({
@@ -282,7 +294,6 @@ export function useUpdateProductStock() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, delta }: { id: string; delta: number }) => {
-      // First get current stock
       const { data: product, error: fetchError } = await supabase
         .from('products')
         .select('stock_quantity')
@@ -313,6 +324,8 @@ export function useCreateInvoice() {
       paid: number;
       status: string;
       payment_method?: string;
+      invoice_number?: string;
+      created_by?: string;
       items: { product_id: string; product_name: string; quantity: number; unit_price: number; total: number; unit_type?: string }[];
     }) => {
       const { items, ...invoiceData } = invoice;
@@ -342,6 +355,33 @@ export function useCreateInvoice() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['invoices'] });
       queryClient.invalidateQueries({ queryKey: ['products'] });
+    },
+  });
+}
+
+// Update invoice
+export function useUpdateInvoice() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, ...data }: { id: string; total?: number; paid?: number; status?: string; invoice_number?: string }) => {
+      const { error } = await supabase.from('invoices').update(data).eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['invoices'] }),
+  });
+}
+
+// Update invoice item
+export function useUpdateInvoiceItem() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, ...data }: { id: string; quantity?: number; unit_price?: number; total?: number }) => {
+      const { error } = await supabase.from('invoice_items').update(data).eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['invoice_items'] });
+      queryClient.invalidateQueries({ queryKey: ['invoices'] });
     },
   });
 }

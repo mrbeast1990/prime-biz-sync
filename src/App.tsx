@@ -10,6 +10,7 @@ import POS from "./pages/POS";
 import InsurancePOS from "./pages/InsurancePOS";
 import InsuranceCustomers from "./pages/InsuranceCustomers";
 import Purchases from "./pages/Purchases";
+import Sales from "./pages/Sales";
 import Accounts from "./pages/Accounts";
 import Treasury from "./pages/Treasury";
 import Reports from "./pages/Reports";
@@ -34,6 +35,7 @@ const App = () => (
           <Route path="/insurance-pos" element={<ProtectedRoute><InsurancePOS /></ProtectedRoute>} />
           <Route path="/insurance-customers" element={<ProtectedRoute><InsuranceCustomers /></ProtectedRoute>} />
           <Route path="/purchases" element={<ProtectedRoute><Purchases /></ProtectedRoute>} />
+          <Route path="/sales" element={<ProtectedRoute><Sales /></ProtectedRoute>} />
           <Route path="/accounts" element={<ProtectedRoute><Accounts /></ProtectedRoute>} />
           <Route path="/treasury" element={<ProtectedRoute><Treasury /></ProtectedRoute>} />
           <Route path="/reports" element={<ProtectedRoute><Reports /></ProtectedRoute>} />

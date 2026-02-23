@@ -14,6 +14,7 @@ import {
   Wallet,
   BarChart3,
   UserCog,
+  Receipt,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -28,6 +29,7 @@ const navItems: NavItem[] = [
   { title: 'البيع السريع', href: '/pos', icon: Zap },
   { title: 'بطاقة صنف', href: '/products', icon: Package },
   { title: 'المشتريات', href: '/purchases', icon: Truck },
+  { title: 'المبيعات', href: '/sales', icon: Receipt },
   { title: 'الحسابات', href: '/accounts', icon: Users },
   { title: 'الخزينة', href: '/treasury', icon: Wallet },
   { title: 'التقارير', href: '/reports', icon: BarChart3 },
