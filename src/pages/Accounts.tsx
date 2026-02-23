@@ -68,7 +68,7 @@ export default function Accounts() {
                       <TableCell className="font-medium">{c.name}</TableCell>
                       <TableCell dir="ltr" className="text-right">{c.phone}</TableCell>
                       <TableCell>{c.address}</TableCell>
-                      <TableCell className="tabular-nums font-medium">{Number(c.balance).toFixed(2)} ر.س</TableCell>
+                      <TableCell className="tabular-nums font-medium">{Number(c.balance).toFixed(2)} د.ل</TableCell>
                     </TableRow>
                   ))}
                   {filterContacts(customers).length === 0 && <TableRow><TableCell colSpan={4} className="text-center py-8 text-muted-foreground">لا يوجد زبائن</TableCell></TableRow>}
@@ -89,7 +89,7 @@ export default function Accounts() {
                       <TableCell className="font-medium">{c.name}</TableCell>
                       <TableCell dir="ltr" className="text-right">{c.phone}</TableCell>
                       <TableCell>{c.address}</TableCell>
-                      <TableCell className="tabular-nums font-medium">{Number(c.balance).toFixed(2)} ر.س</TableCell>
+                      <TableCell className="tabular-nums font-medium">{Number(c.balance).toFixed(2)} د.ل</TableCell>
                     </TableRow>
                   ))}
                   {filterContacts(suppliers).length === 0 && <TableRow><TableCell colSpan={4} className="text-center py-8 text-muted-foreground">لا يوجد موردين</TableCell></TableRow>}
@@ -110,7 +110,7 @@ export default function Accounts() {
                       <TableCell className="font-medium">{c.name}</TableCell>
                       <TableCell>{c.card_number || '—'}</TableCell>
                       <TableCell dir="ltr" className="text-right">{c.phone || '—'}</TableCell>
-                      <TableCell className="tabular-nums font-medium">{getInsuranceSalesTotal(c.id).toFixed(2)} ر.س</TableCell>
+                      <TableCell className="tabular-nums font-medium">{getInsuranceSalesTotal(c.id).toFixed(2)} د.ل</TableCell>
                     </TableRow>
                   ))}
                   {filterInsurance().length === 0 && <TableRow><TableCell colSpan={4} className="text-center py-8 text-muted-foreground">لا يوجد عملاء تأمين</TableCell></TableRow>}
