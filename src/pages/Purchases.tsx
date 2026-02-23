@@ -112,7 +112,7 @@ export default function Purchases() {
         .eq('invoice_date', today);
       const sysNumber = `PUR-${dateStr}-${String((count || 0) + 1).padStart(3, '0')}`;
 
-      await createInvoice.mutateAsync({
+      const inv = await createInvoice.mutateAsync({
         invoice_type: 'purchase',
         contact_id: selectedSupplier.id,
         contact_name: selectedSupplier.name,
@@ -131,8 +131,17 @@ export default function Purchases() {
         })),
       });
 
+      // Save batches and update stock
       for (const item of items) {
         await updateStock.mutateAsync({ id: item.product_id, delta: item.quantity });
+        // Create batch record for FEFO tracking
+        await supabase.from('product_batches').insert({
+          product_id: item.product_id,
+          invoice_id: inv.id,
+          quantity: item.quantity,
+          original_quantity: item.quantity,
+          expiry_date: item.has_expiry && item.expiry_date ? item.expiry_date : null,
+        });
       }
 
       toast({ title: 'تم حفظ فاتورة المشتريات', description: `فاتورة رقم ${invoiceNumber} - إجمالي ${total.toFixed(2)} د.ل من ${selectedSupplier.name}` });
