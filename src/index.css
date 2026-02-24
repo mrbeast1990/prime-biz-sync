@@ -171,7 +171,7 @@
     @apply bg-background text-foreground font-cairo antialiased;
     font-feature-settings: "ss01", "ss02";
     unicode-bidi: plaintext;
-    font-family: "IBM Plex Sans", "Cairo", sans-serif;
+    font-family: "Cairo", "IBM Plex Sans", sans-serif;
   }
 
   /* Force Western (English) numerals everywhere */

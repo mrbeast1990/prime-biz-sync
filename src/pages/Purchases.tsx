@@ -119,8 +119,8 @@ export default function Purchases() {
         invoice_number: `${sysNumber} | ${invoiceNumber.trim()}`,
         created_by: user?.id,
         total,
-        paid: total,
-        status: 'completed',
+        paid: 0,
+        status: 'pending',
         payment_method: 'cash',
         items: items.map(item => ({
           product_id: item.product_id,
