@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import {
   Barcode, Search, Plus, Minus, Trash2, CreditCard, Banknote, User, ShoppingCart, X,
   RotateCcw, AlertTriangle, UserPlus, Loader2, ChevronDown, Zap, FileText, FileDown,
-  Eye, Edit, Save, ChevronRight, ChevronLeft, Star,
+  Eye, Edit, Save, ChevronRight, ChevronLeft, Star, ChevronUp,
 } from 'lucide-react';
 import { Product, CartItem, SaleMode } from '@/types';
 import { cn } from '@/lib/utils';
@@ -342,20 +342,20 @@ export default function POS() {
                   </div>
                 )}
                 <div className="flex gap-3">
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant={saleMode === 'damage' ? 'destructive' : 'outline'} className="h-auto min-w-[5rem] flex-col gap-1 px-4 py-3">
-                        {(() => { const current = saleModes.find(m => m.mode === saleMode); const Icon = current!.icon; return <><Icon className="h-5 w-5" /><span className="text-xs font-medium">{current!.label}</span></>; })()}
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent className="w-48 bg-popover" align="start">
-                      {saleModes.map(({ mode, label, icon: Icon }) => (
-                        <DropdownMenuItem key={mode} onClick={() => setSaleMode(mode)} className={cn('gap-2 cursor-pointer', saleMode === mode && 'bg-accent')}>
-                          <Icon className="h-4 w-4" />{label}
-                        </DropdownMenuItem>
-                      ))}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                  <div className={cn('rounded-lg border border-border flex items-center gap-1 px-3 py-2', saleMode === 'damage' && 'border-destructive bg-destructive/10')}>
+                    <div className="flex flex-col items-center justify-center">
+                      {(() => { const current = saleModes.find(m => m.mode === saleMode); const Icon = current!.icon; return (
+                        <div className="flex items-center gap-2">
+                          <Icon className="h-5 w-5 text-primary" />
+                          <span className="text-sm font-semibold text-card-foreground">{current!.label}</span>
+                        </div>
+                      ); })()}
+                    </div>
+                    <div className="flex flex-col gap-0.5 mr-1">
+                      <button onClick={() => { const idx = saleModes.findIndex(m => m.mode === saleMode); setSaleMode(saleModes[(idx - 1 + saleModes.length) % saleModes.length].mode); }} className="rounded p-0.5 hover:bg-muted transition-colors"><ChevronUp className="h-3.5 w-3.5 text-muted-foreground" /></button>
+                      <button onClick={() => { const idx = saleModes.findIndex(m => m.mode === saleMode); setSaleMode(saleModes[(idx + 1) % saleModes.length].mode); }} className="rounded p-0.5 hover:bg-muted transition-colors"><ChevronDown className="h-3.5 w-3.5 text-muted-foreground" /></button>
+                    </div>
+                  </div>
                   <div className="flex-1 rounded-lg bg-primary/10 p-3 flex items-center justify-between">
                     <span className="text-sm text-muted-foreground">الإجمالي</span>
                     <span className="text-4xl font-bold text-primary tabular-nums">{total.toFixed(2)} د.ل</span>
