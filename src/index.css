@@ -11,22 +11,15 @@
 @import '@fontsource/cairo/600.css';
 @import '@fontsource/cairo/700.css';
 
-/* Force IBM Plex Sans for Latin/numbers, Cairo for Arabic */
+/* SystemFont: IBM Plex Sans for Latin, Cairo for Arabic */
 @font-face {
-  font-family: 'AppFont';
-  src: local('IBM Plex Sans');
-  unicode-range: U+0000-024F, U+0300-036F, U+0600-06FF;
-  /* Latin + Arabic fallback - IBM Plex Sans handles Latin, Cairo handles Arabic */
-}
-
-@font-face {
-  font-family: 'LatinFont';
+  font-family: 'SystemFont';
   src: local('IBM Plex Sans');
   unicode-range: U+0000-024F, U+0300-036F, U+2000-206F, U+2070-209F, U+20A0-20CF, U+2100-214F;
 }
 
 @font-face {
-  font-family: 'ArabicFont';
+  font-family: 'SystemFont';
   src: local('Cairo');
   unicode-range: U+0600-06FF, U+FB50-FDFF, U+FE70-FEFF;
 }
@@ -171,7 +164,7 @@
     @apply bg-background text-foreground font-cairo antialiased;
     font-feature-settings: "ss01", "ss02";
     unicode-bidi: plaintext;
-    font-family: "Cairo", "IBM Plex Sans", sans-serif;
+    font-family: 'SystemFont', 'IBM Plex Sans', 'Cairo', sans-serif;
   }
 
   /* Force Western (English) numerals everywhere */
