@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import {
   Barcode, Search, Plus, Minus, Trash2, CreditCard, Banknote, User, ShoppingCart, X,
   RotateCcw, AlertTriangle, UserPlus, Loader2, ChevronDown, Zap, FileText, FileDown,
-  Eye, Edit, Save, ChevronRight, ChevronLeft,
+  Eye, Edit, Save, ChevronRight, ChevronLeft, Star,
 } from 'lucide-react';
 import { Product, CartItem, SaleMode } from '@/types';
 import { cn } from '@/lib/utils';
@@ -46,7 +46,6 @@ async function generateInvoiceNumber(type: 'sale' | 'purchase' = 'sale') {
   return `${prefix}-${dateStr}-${seq}`;
 }
 
-// FEFO: deduct from batches with nearest expiry first
 async function deductFromBatches(productId: string, quantity: number) {
   const { data: batches } = await supabase
     .from('product_batches')
@@ -54,22 +53,16 @@ async function deductFromBatches(productId: string, quantity: number) {
     .eq('product_id', productId)
     .gt('quantity', 0)
     .order('expiry_date', { ascending: true, nullsFirst: false });
-
   if (!batches) return;
-
   let remaining = quantity;
   for (const batch of batches) {
     if (remaining <= 0) break;
     const deduct = Math.min(remaining, batch.quantity);
-    await supabase
-      .from('product_batches')
-      .update({ quantity: batch.quantity - deduct })
-      .eq('id', batch.id);
+    await supabase.from('product_batches').update({ quantity: batch.quantity - deduct }).eq('id', batch.id);
     remaining -= deduct;
   }
 }
 
-// Reverse FEFO for returns: add back to most recent batch
 async function addToBatches(productId: string, quantity: number) {
   const { data: batches } = await supabase
     .from('product_batches')
@@ -77,13 +70,15 @@ async function addToBatches(productId: string, quantity: number) {
     .eq('product_id', productId)
     .order('created_at', { ascending: false })
     .limit(1);
-
   if (batches && batches.length > 0) {
-    await supabase
-      .from('product_batches')
-      .update({ quantity: batches[0].quantity + quantity })
-      .eq('id', batches[0].id);
+    await supabase.from('product_batches').update({ quantity: batches[0].quantity + quantity }).eq('id', batches[0].id);
   }
+}
+
+const SHORTCUTS_KEY = 'pos_product_shortcuts';
+
+function getShortcuts(): string[] {
+  try { return JSON.parse(localStorage.getItem(SHORTCUTS_KEY) || '[]'); } catch { return []; }
 }
 
 const paymentLabels: Record<string, string> = {
@@ -104,14 +99,19 @@ export default function POS() {
   const [barcodeInput, setBarcodeInput] = useState('');
   const [saleMode, setSaleMode] = useState<SaleMode>('cash');
   const [customerName, setCustomerName] = useState('');
+  const [shortcuts, setShortcuts] = useState<string[]>(getShortcuts);
   const barcodeRef = useRef<HTMLInputElement>(null);
 
-  const filteredProducts = products.filter(
+  // Only show products when searching
+  const showProducts = searchQuery.length > 0;
+  const filteredProducts = showProducts ? products.filter(
     (product) =>
       product.trade_name.includes(searchQuery) ||
       (product.scientific_name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
       (product.barcode || '').includes(searchQuery)
-  );
+  ) : [];
+
+  const shortcutProducts = products.filter(p => shortcuts.includes(p.id));
 
   useEffect(() => { barcodeRef.current?.focus(); }, []);
 
@@ -198,7 +198,6 @@ export default function POS() {
 
       for (const item of cart) {
         await updateStock.mutateAsync({ id: item.product.id, delta: stockDelta * item.quantity });
-        // FEFO batch deduction/addition
         if (saleMode === 'return') {
           await addToBatches(item.product.id, item.quantity);
         } else {
@@ -233,36 +232,69 @@ export default function POS() {
         </TabsList>
 
         <TabsContent value="pos">
-          <div className="grid h-[calc(100vh-12rem)] grid-cols-1 gap-6 lg:grid-cols-3">
-            <div className="lg:col-span-2 flex flex-col">
-              <form onSubmit={handleBarcodeSubmit} className="mb-4">
+          <div className="grid h-[calc(100vh-12rem)] grid-cols-1 gap-4 lg:grid-cols-12">
+            {/* LEFT: Search & Products */}
+            <div className="lg:col-span-4 flex flex-col">
+              <form onSubmit={handleBarcodeSubmit} className="mb-3">
                 <div className="relative">
                   <Barcode className="absolute right-3 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
-                  <Input ref={barcodeRef} value={barcodeInput} onChange={(e) => setBarcodeInput(e.target.value)} placeholder="امسح الباركود أو أدخل الكود..." className="pr-10 h-12 text-lg font-mono input-focus" />
+                  <Input ref={barcodeRef} value={barcodeInput} onChange={(e) => setBarcodeInput(e.target.value)} placeholder="امسح الباركود..." className="pr-10 h-11 font-mono input-focus" />
                 </div>
               </form>
-              <div className="relative mb-4">
+              <div className="relative mb-3">
                 <Search className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="بحث عن صنف..." className="pr-9 input-focus" />
               </div>
-              <div className="flex-1 overflow-y-auto custom-scrollbar">
-                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
-                  {filteredProducts.map((product) => (
-                    <button key={product.id} onClick={() => addToCart(product)} disabled={product.stock_quantity === 0}
-                      className={cn('rounded-lg bg-card p-4 text-right shadow-card transition-all hover:shadow-md hover:scale-[1.02] active:scale-[0.98]', product.stock_quantity === 0 && 'opacity-50 cursor-not-allowed')}>
-                      <p className="font-medium text-card-foreground text-sm leading-tight">{product.trade_name}</p>
-                      <p className="mt-1 text-xs text-muted-foreground leading-tight">{product.scientific_name}</p>
-                      <div className="mt-2 flex items-center justify-between">
-                        <span className="text-lg font-bold text-primary tabular-nums">{product.sale_price.toFixed(2)}</span>
-                        <span className={cn('text-xs font-medium rounded-full px-2 py-0.5', product.stock_quantity <= product.min_stock ? 'bg-destructive/10 text-destructive' : 'bg-success/10 text-success')}>{product.stock_quantity}</span>
-                      </div>
-                    </button>
-                  ))}
+
+              {/* Shortcut products */}
+              {shortcutProducts.length > 0 && !showProducts && (
+                <div className="mb-3">
+                  <p className="text-xs text-muted-foreground mb-2 flex items-center gap-1"><Star className="h-3 w-3" /> اختصارات</p>
+                  <div className="grid grid-cols-2 gap-2">
+                    {shortcutProducts.map((product) => (
+                      <button key={product.id} onClick={() => addToCart(product)} disabled={product.stock_quantity === 0}
+                        className={cn('rounded-lg bg-accent p-3 text-right transition-all hover:bg-accent/80 active:scale-[0.98] border border-primary/20', product.stock_quantity === 0 && 'opacity-50 cursor-not-allowed')}>
+                        <p className="font-medium text-card-foreground text-sm leading-tight truncate">{product.trade_name}</p>
+                        <div className="mt-1 flex items-center justify-between">
+                          <span className="text-sm font-bold text-primary tabular-nums">{product.sale_price.toFixed(2)}</span>
+                          <span className={cn('text-xs rounded-full px-1.5 py-0.5', product.stock_quantity <= product.min_stock ? 'bg-destructive/10 text-destructive' : 'bg-success/10 text-success')}>{product.stock_quantity}</span>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
                 </div>
+              )}
+
+              {/* Product search results */}
+              <div className="flex-1 overflow-y-auto custom-scrollbar">
+                {showProducts ? (
+                  <div className="grid grid-cols-2 gap-2">
+                    {filteredProducts.map((product) => (
+                      <button key={product.id} onClick={() => addToCart(product)} disabled={product.stock_quantity === 0}
+                        className={cn('rounded-lg bg-card p-3 text-right shadow-card transition-all hover:shadow-md hover:scale-[1.02] active:scale-[0.98]', product.stock_quantity === 0 && 'opacity-50 cursor-not-allowed')}>
+                        <p className="font-medium text-card-foreground text-sm leading-tight truncate">{product.trade_name}</p>
+                        <p className="mt-0.5 text-xs text-muted-foreground leading-tight truncate">{product.scientific_name}</p>
+                        <div className="mt-1 flex items-center justify-between">
+                          <span className="text-sm font-bold text-primary tabular-nums">{product.sale_price.toFixed(2)}</span>
+                          <span className={cn('text-xs rounded-full px-1.5 py-0.5', product.stock_quantity <= product.min_stock ? 'bg-destructive/10 text-destructive' : 'bg-success/10 text-success')}>{product.stock_quantity}</span>
+                        </div>
+                      </button>
+                    ))}
+                    {filteredProducts.length === 0 && (
+                      <div className="col-span-2 text-center py-8 text-muted-foreground text-sm">لا توجد نتائج</div>
+                    )}
+                  </div>
+                ) : !shortcutProducts.length && (
+                  <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground">
+                    <Search className="h-10 w-10 mb-2 opacity-30" />
+                    <p className="text-sm">ابحث عن صنف بالاسم أو الباركود</p>
+                  </div>
+                )}
               </div>
             </div>
 
-            <div className="flex flex-col rounded-xl bg-card shadow-card">
+            {/* CENTER: Cart */}
+            <div className="lg:col-span-8 flex flex-col rounded-xl bg-card shadow-card">
               <div className="flex items-center justify-between border-b border-border p-4">
                 <div className="flex items-center gap-3">
                   <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10"><ShoppingCart className="h-5 w-5 text-primary" /></div>
@@ -278,15 +310,15 @@ export default function POS() {
                     <p className="text-sm text-muted-foreground">امسح الكود أو اختر صنفاً</p>
                   </div>
                 ) : (
-                  <div className="space-y-3">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     {cart.map((item) => (
                       <div key={item.product.id} className="rounded-lg bg-muted/50 p-3">
                         <div className="flex items-start justify-between">
-                          <div className="flex-1">
-                            <p className="font-medium text-card-foreground">{item.product.trade_name}</p>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium text-card-foreground truncate">{item.product.trade_name}</p>
                             <p className="text-sm text-muted-foreground">{item.product.sale_price.toFixed(2)} د.ل</p>
                           </div>
-                          <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive hover:text-destructive" onClick={() => removeFromCart(item.product.id)}><Trash2 className="h-3 w-3" /></Button>
+                          <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive hover:text-destructive flex-shrink-0" onClick={() => removeFromCart(item.product.id)}><Trash2 className="h-3 w-3" /></Button>
                         </div>
                         <div className="mt-2 flex items-center justify-between">
                           <div className="flex items-center gap-2">
@@ -302,23 +334,25 @@ export default function POS() {
                 )}
               </div>
               <div className="border-t border-border p-4 space-y-3">
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant={saleMode === 'damage' ? 'destructive' : 'default'} className="w-full gap-2 justify-between">
-                      <span className="flex items-center gap-2">
-                        {(() => { const current = saleModes.find(m => m.mode === saleMode); const Icon = current!.icon; return <><Icon className="h-4 w-4" />{current!.label}</>; })()}
-                      </span>
-                      <ChevronDown className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent className="w-[var(--radix-dropdown-menu-trigger-width)] bg-popover" align="start">
-                    {saleModes.map(({ mode, label, icon: Icon }) => (
-                      <DropdownMenuItem key={mode} onClick={() => setSaleMode(mode)} className={cn('gap-2 cursor-pointer', saleMode === mode && 'bg-accent')}>
-                        <Icon className="h-4 w-4" />{label}
-                      </DropdownMenuItem>
-                    ))}
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                <div className="flex gap-3">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant={saleMode === 'damage' ? 'destructive' : 'default'} className="flex-1 gap-2 justify-between">
+                        <span className="flex items-center gap-2">
+                          {(() => { const current = saleModes.find(m => m.mode === saleMode); const Icon = current!.icon; return <><Icon className="h-4 w-4" />{current!.label}</>; })()}
+                        </span>
+                        <ChevronDown className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent className="w-[var(--radix-dropdown-menu-trigger-width)] bg-popover" align="start">
+                      {saleModes.map(({ mode, label, icon: Icon }) => (
+                        <DropdownMenuItem key={mode} onClick={() => setSaleMode(mode)} className={cn('gap-2 cursor-pointer', saleMode === mode && 'bg-accent')}>
+                          <Icon className="h-4 w-4" />{label}
+                        </DropdownMenuItem>
+                      ))}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
                 {saleMode === 'credit' && (
                   <div className="relative">
                     <User className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -356,7 +390,7 @@ export default function POS() {
   );
 }
 
-// ===== Issued Invoices Tab (formerly Sales page) =====
+// ===== Issued Invoices Tab =====
 
 function IssuedInvoicesTab() {
   const { data: allInvoices = [], isLoading } = useInvoices();
@@ -408,13 +442,9 @@ function IssuedInvoicesTab() {
     <div className="space-y-4">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="icon" className="h-9 w-9" onClick={() => navigateDate(-1)}>
-            <ChevronRight className="h-4 w-4" />
-          </Button>
+          <Button variant="outline" size="icon" className="h-9 w-9" onClick={() => navigateDate(-1)}><ChevronRight className="h-4 w-4" /></Button>
           <Input type="date" value={selectedDate} onChange={e => setSelectedDate(e.target.value)} className="w-[160px] text-center" />
-          <Button variant="outline" size="icon" className="h-9 w-9" onClick={() => navigateDate(1)} disabled={isToday}>
-            <ChevronLeft className="h-4 w-4" />
-          </Button>
+          <Button variant="outline" size="icon" className="h-9 w-9" onClick={() => navigateDate(1)} disabled={isToday}><ChevronLeft className="h-4 w-4" /></Button>
           {!isToday && <Button variant="ghost" size="sm" onClick={() => setSelectedDate(new Date().toISOString().slice(0, 10))}>اليوم</Button>}
         </div>
         <div className="relative max-w-sm flex-1">

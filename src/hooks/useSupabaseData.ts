@@ -363,7 +363,7 @@ export function useCreateInvoice() {
 export function useUpdateInvoice() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ id, ...data }: { id: string; total?: number; paid?: number; status?: string; invoice_number?: string }) => {
+    mutationFn: async ({ id, ...data }: { id: string; total?: number; paid?: number; status?: string; invoice_number?: string; payment_method?: string }) => {
       const { error } = await supabase.from('invoices').update(data).eq('id', id);
       if (error) throw error;
     },
