@@ -13,7 +13,7 @@ export default function Dashboard() {
 
   const lowStockProducts = products.filter(p => p.stock_quantity <= p.min_stock);
   const expiringProducts = products.filter(p => {
-    if (!p.has_expiry) return false;
+    if (!p.has_expiry || !p.expiry_date) return false;
     const expiryDate = new Date(p.expiry_date);
     const threeMonthsFromNow = new Date();
     threeMonthsFromNow.setMonth(threeMonthsFromNow.getMonth() + 3);

@@ -141,7 +141,7 @@ export default function InsurancePOS() {
           <div className="flex items-center justify-between border-b border-border p-4">
             <div className="flex items-center gap-3">
               <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10"><Shield className="h-5 w-5 text-primary" /></div>
-              <div><h2 className="font-semibold text-card-foreground">سلة التأمين</h2><p className="text-sm text-muted-foreground">{itemCount} منتج</p></div>
+              <div><h2 className="font-semibold text-card-foreground">إصدار فاتورة</h2><p className="text-sm text-muted-foreground">{itemCount} منتج</p></div>
             </div>
             {cart.length > 0 && <Button variant="ghost" size="icon" onClick={clearCart}><X className="h-4 w-4" /></Button>}
           </div>
@@ -149,7 +149,7 @@ export default function InsurancePOS() {
             {cart.length === 0 ? (
               <div className="flex h-full flex-col items-center justify-center text-center">
                 <ShoppingCart className="h-12 w-12 text-muted-foreground/50" />
-                <p className="mt-4 text-muted-foreground">السلة فارغة</p>
+                <p className="mt-4 text-muted-foreground">لا توجد أصناف</p>
                 <p className="text-sm text-muted-foreground">امسح الباركود أو اختر منتجاً</p>
               </div>
             ) : (
@@ -176,11 +176,15 @@ export default function InsurancePOS() {
               </div>
             )}
           </div>
-          <div className="border-t border-border p-4">
-            <div className="mb-4 rounded-lg bg-primary/10 p-4">
-              <div className="flex items-center justify-between">
-                <span className="text-muted-foreground">الإجمالي</span>
-                <span className="text-3xl font-bold text-primary tabular-nums">{total.toFixed(2)} د.ل</span>
+          <div className="border-t border-border p-4 space-y-3">
+            <div className="flex gap-3">
+              <div className="rounded-lg border border-border px-4 py-3 flex flex-col items-center justify-center min-w-[5rem]">
+                <Banknote className="h-5 w-5 text-primary" />
+                <span className="text-xs font-medium text-card-foreground mt-1">نقدي</span>
+              </div>
+              <div className="flex-1 rounded-lg bg-primary/10 p-3 flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">الإجمالي</span>
+                <span className="text-4xl font-bold text-primary tabular-nums">{total.toFixed(2)} د.ل</span>
               </div>
             </div>
             <Button size="lg" className="w-full gap-2" onClick={handleSell} disabled={createSale.isPending}>

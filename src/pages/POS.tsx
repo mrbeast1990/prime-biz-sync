@@ -298,7 +298,7 @@ export default function POS() {
               <div className="flex items-center justify-between border-b border-border p-4">
                 <div className="flex items-center gap-3">
                   <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10"><ShoppingCart className="h-5 w-5 text-primary" /></div>
-                  <div><h2 className="font-semibold text-card-foreground">السلة</h2><p className="text-sm text-muted-foreground">{itemCount} صنف</p></div>
+                  <div><h2 className="font-semibold text-card-foreground">إصدار فاتورة</h2><p className="text-sm text-muted-foreground">{itemCount} صنف</p></div>
                 </div>
                 {cart.length > 0 && <Button variant="ghost" size="icon" onClick={clearCart}><X className="h-4 w-4" /></Button>}
               </div>
@@ -306,7 +306,7 @@ export default function POS() {
                 {cart.length === 0 ? (
                   <div className="flex h-full flex-col items-center justify-center text-center">
                     <ShoppingCart className="h-12 w-12 text-muted-foreground/50" />
-                    <p className="mt-4 text-muted-foreground">السلة فارغة</p>
+                    <p className="mt-4 text-muted-foreground">لا توجد أصناف</p>
                     <p className="text-sm text-muted-foreground">امسح الكود أو اختر صنفاً</p>
                   </div>
                 ) : (
@@ -334,25 +334,6 @@ export default function POS() {
                 )}
               </div>
               <div className="border-t border-border p-4 space-y-3">
-                <div className="flex gap-3">
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant={saleMode === 'damage' ? 'destructive' : 'default'} className="flex-1 gap-2 justify-between">
-                        <span className="flex items-center gap-2">
-                          {(() => { const current = saleModes.find(m => m.mode === saleMode); const Icon = current!.icon; return <><Icon className="h-4 w-4" />{current!.label}</>; })()}
-                        </span>
-                        <ChevronDown className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent className="w-[var(--radix-dropdown-menu-trigger-width)] bg-popover" align="start">
-                      {saleModes.map(({ mode, label, icon: Icon }) => (
-                        <DropdownMenuItem key={mode} onClick={() => setSaleMode(mode)} className={cn('gap-2 cursor-pointer', saleMode === mode && 'bg-accent')}>
-                          <Icon className="h-4 w-4" />{label}
-                        </DropdownMenuItem>
-                      ))}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
                 {saleMode === 'credit' && (
                   <div className="relative">
                     <User className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -360,10 +341,24 @@ export default function POS() {
                     <datalist id="customers-list">{contacts.map(c => <option key={c.id} value={c.name} />)}</datalist>
                   </div>
                 )}
-                <div className="rounded-lg bg-primary/10 p-4">
-                  <div className="flex items-center justify-between">
-                    <span className="text-muted-foreground">الإجمالي</span>
-                    <span className="text-3xl font-bold text-primary tabular-nums">{total.toFixed(2)} د.ل</span>
+                <div className="flex gap-3">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant={saleMode === 'damage' ? 'destructive' : 'outline'} className="h-auto min-w-[5rem] flex-col gap-1 px-4 py-3">
+                        {(() => { const current = saleModes.find(m => m.mode === saleMode); const Icon = current!.icon; return <><Icon className="h-5 w-5" /><span className="text-xs font-medium">{current!.label}</span></>; })()}
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent className="w-48 bg-popover" align="start">
+                      {saleModes.map(({ mode, label, icon: Icon }) => (
+                        <DropdownMenuItem key={mode} onClick={() => setSaleMode(mode)} className={cn('gap-2 cursor-pointer', saleMode === mode && 'bg-accent')}>
+                          <Icon className="h-4 w-4" />{label}
+                        </DropdownMenuItem>
+                      ))}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                  <div className="flex-1 rounded-lg bg-primary/10 p-3 flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">الإجمالي</span>
+                    <span className="text-4xl font-bold text-primary tabular-nums">{total.toFixed(2)} د.ل</span>
                   </div>
                 </div>
                 <Button size="lg" className={cn('w-full gap-2', saleMode === 'damage' && 'bg-destructive hover:bg-destructive/90')} onClick={handleCheckout} disabled={createInvoice.isPending}>
