@@ -54,14 +54,14 @@ export function ProductTable({ products, onEdit, onDelete }: ProductTableProps) 
                       <img src={product.image_url} alt={product.trade_name} className="h-8 w-8 rounded object-cover" />
                     )}
                     <div>
-                      <span className="font-medium text-card-foreground">{product.trade_name}</span>
+                      <span dir="auto" className="font-medium text-card-foreground font-sans">{product.trade_name}</span>
                     {isLowStock(product) && (
                         <AlertTriangle className="inline-block mr-1 h-4 w-4 text-warning" />
                       )}
                     </div>
                   </div>
                 </td>
-                <td className="px-4 py-3 text-sm text-muted-foreground">{product.scientific_name}</td>
+                <td dir="auto" className="px-4 py-3 text-sm text-muted-foreground font-sans">{product.scientific_name}</td>
                 <td className="px-4 py-3">
                   <span className="inline-flex items-center rounded-full bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary">
                     {product.packaging_type} ({product.units_per_package})

@@ -72,7 +72,7 @@ export default function InsuranceCustomers() {
                   <TableCell>{customer.card_number || '—'}</TableCell>
                   <TableCell dir="ltr" className="text-right">{customer.phone || '—'}</TableCell>
                   <TableCell>{getSalesCount(customer.id)}</TableCell>
-                  <TableCell className="tabular-nums">{getTotalSpent(customer.id).toFixed(2)} ر.س</TableCell>
+                  <TableCell className="tabular-nums">{getTotalSpent(customer.id).toFixed(2)} د.ل</TableCell>
                   <TableCell>{new Date(customer.created_at).toLocaleDateString('ar-SA')}</TableCell>
                   <TableCell><Button variant="ghost" size="icon" onClick={() => openEdit(customer)}><Edit className="h-4 w-4" /></Button></TableCell>
                 </TableRow>

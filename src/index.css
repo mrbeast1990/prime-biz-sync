@@ -11,18 +11,8 @@
 @import '@fontsource/cairo/600.css';
 @import '@fontsource/cairo/700.css';
 
-/* SystemFont: IBM Plex Sans for Latin, Cairo for Arabic */
-@font-face {
-  font-family: 'SystemFont';
-  src: local('IBM Plex Sans');
-  unicode-range: U+0000-024F, U+0300-036F, U+2000-206F, U+2070-209F, U+20A0-20CF, U+2100-214F;
-}
-
-@font-face {
-  font-family: 'SystemFont';
-  src: local('Cairo');
-  unicode-range: U+0600-06FF, U+FB50-FDFF, U+FE70-FEFF;
-}
+/* Fonts: IBM Plex Sans for Latin/Numbers, Cairo for Arabic
+   (We rely on font fallback ordering; @fontsource provides the @font-face rules.) */
 
 /* Modern POS & Accounting System Design System - Arabic RTL */
 
@@ -164,7 +154,7 @@
     @apply bg-background text-foreground font-cairo antialiased;
     font-feature-settings: "ss01", "ss02";
     unicode-bidi: plaintext;
-    font-family: 'SystemFont', 'IBM Plex Sans', 'Cairo', sans-serif;
+    font-family: "IBM Plex Sans", "Cairo", sans-serif;
   }
 
   /* Force Western (English) numerals everywhere */

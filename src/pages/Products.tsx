@@ -113,7 +113,7 @@ export default function Products() {
         </div>
         <div className="rounded-lg bg-card p-4 shadow-card">
           <p className="text-sm text-muted-foreground">قيمة المخزون</p>
-          <p className="text-2xl font-bold text-success tabular-nums">{products.reduce((sum, p) => sum + p.cost_price * p.stock_quantity, 0).toFixed(2)} ر.س</p>
+          <p className="text-2xl font-bold text-success tabular-nums">{products.reduce((sum, p) => sum + p.cost_price * p.stock_quantity, 0).toFixed(2)} د.ل</p>
         </div>
       </div>
 

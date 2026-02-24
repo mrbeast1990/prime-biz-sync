@@ -60,7 +60,7 @@ export function RecentTransactions({ invoices }: RecentTransactionsProps) {
                     invoice.invoice_type === 'sale' ? 'text-success' : 'text-info'
                   )}
                 >
-                  {invoice.invoice_type === 'sale' ? '+' : '-'}{invoice.total.toFixed(2)} ر.س
+                  {invoice.invoice_type === 'sale' ? '+' : '-'}{invoice.total.toFixed(2)} د.ل
                 </p>
                 <p className="text-xs text-muted-foreground">
                   {new Date(invoice.created_at).toLocaleTimeString('ar-SA', {
