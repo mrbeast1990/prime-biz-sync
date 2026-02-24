@@ -1,13 +1,15 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { ProductTable } from '@/components/products/ProductTable';
 import { ProductModal } from '@/components/products/ProductModal';
+import { ImportPreviewDialog } from '@/components/products/ImportPreviewDialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Plus, Search, Download, Upload, Filter, Loader2 } from 'lucide-react';
 import { Product } from '@/types';
 import { toast } from '@/hooks/use-toast';
 import { useProducts, useCreateProduct, useUpdateProduct, useDeleteProduct } from '@/hooks/useSupabaseData';
+import { exportProductsToCSV, parseCSV, mapCSVToProducts } from '@/utils/exportUtils';
 
 export default function Products() {
   const { data: products = [], isLoading } = useProducts();
@@ -17,6 +19,9 @@ export default function Products() {
   const [searchQuery, setSearchQuery] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [importProducts, setImportProducts] = useState<Partial<Product>[]>([]);
+  const [isImportOpen, setIsImportOpen] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const filteredProducts = products.filter(
     (product) =>
@@ -63,6 +68,58 @@ export default function Products() {
     setIsModalOpen(true);
   };
 
+  const handleExport = () => {
+    if (products.length === 0) {
+      toast({ title: 'لا توجد بيانات', description: 'لا توجد منتجات لتصديرها', variant: 'destructive' });
+      return;
+    }
+    exportProductsToCSV(products);
+    toast({ title: 'تم التصدير', description: `تم تصدير ${products.length} صنف بنجاح` });
+  };
+
+  const handleImportClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      const text = evt.target?.result as string;
+      const rows = parseCSV(text);
+      if (rows.length === 0) {
+        toast({ title: 'ملف فارغ', description: 'لم يتم العثور على بيانات في الملف', variant: 'destructive' });
+        return;
+      }
+      const mapped = mapCSVToProducts(rows);
+      setImportProducts(mapped);
+      setIsImportOpen(true);
+    };
+    reader.readAsText(file, 'UTF-8');
+    // Reset so same file can be re-selected
+    e.target.value = '';
+  };
+
+  const handleImportConfirm = async (items: Partial<Product>[]) => {
+    let success = 0;
+    let failed = 0;
+    for (const item of items) {
+      try {
+        await createProduct.mutateAsync(item);
+        success++;
+      } catch {
+        failed++;
+      }
+    }
+    setIsImportOpen(false);
+    toast({
+      title: 'تم الاستيراد',
+      description: `تمت إضافة ${success} صنف بنجاح${failed > 0 ? ` | فشل ${failed}` : ''}`,
+      variant: failed > 0 ? 'destructive' : 'default',
+    });
+  };
+
   if (isLoading) {
     return (
       <MainLayout title="بطاقة صنف">
@@ -75,6 +132,8 @@ export default function Products() {
 
   return (
     <MainLayout title="بطاقة صنف">
+      <input type="file" ref={fileInputRef} accept=".csv" className="hidden" onChange={handleFileChange} />
+
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between animate-fade-in">
         <div className="flex flex-1 gap-3">
           <div className="relative flex-1 max-w-md">
@@ -84,8 +143,8 @@ export default function Products() {
           <Button variant="outline" size="icon"><Filter className="h-4 w-4" /></Button>
         </div>
         <div className="flex gap-3">
-          <Button variant="outline" className="gap-2"><Download className="h-4 w-4" />تصدير</Button>
-          <Button variant="outline" className="gap-2"><Upload className="h-4 w-4" />استيراد</Button>
+          <Button variant="outline" className="gap-2" onClick={handleExport}><Download className="h-4 w-4" />تصدير</Button>
+          <Button variant="outline" className="gap-2" onClick={handleImportClick}><Upload className="h-4 w-4" />استيراد</Button>
           <Button onClick={handleAddNew} className="gap-2"><Plus className="h-4 w-4" />إضافة صنف</Button>
         </div>
       </div>
@@ -126,6 +185,13 @@ export default function Products() {
       )}
 
       <ProductModal isOpen={isModalOpen} onClose={() => { setIsModalOpen(false); setSelectedProduct(null); }} onSave={handleSave} product={selectedProduct} />
+
+      <ImportPreviewDialog
+        isOpen={isImportOpen}
+        onClose={() => setIsImportOpen(false)}
+        onConfirm={handleImportConfirm}
+        initialProducts={importProducts}
+      />
     </MainLayout>
   );
 }
