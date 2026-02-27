@@ -36,6 +36,7 @@ export function useCreateProduct() {
         min_stock: product.min_stock || 0,
         cost_price: product.cost_price || 0,
         sale_price: product.sale_price || 0,
+        batch_number: product.batch_number || null,
       }).select().single();
       if (error) throw error;
       return data;
@@ -62,6 +63,7 @@ export function useUpdateProduct() {
         min_stock: product.min_stock,
         cost_price: product.cost_price,
         sale_price: product.sale_price,
+        batch_number: product.batch_number || null,
       }).eq('id', id).select().single();
       if (error) throw error;
       return data;

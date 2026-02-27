@@ -15,6 +15,7 @@ export interface Product {
   has_expiry: boolean;
   image_url?: string;
   is_active?: boolean;
+  batch_number?: string;
   created_at: string;
   updated_at: string;
 }
