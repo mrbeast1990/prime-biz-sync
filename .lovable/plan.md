@@ -1,48 +1,32 @@
 
 
-# خطة التعديلات
+# تحليل المشكلة والحل
 
-## المشاكل المكتشفة والحلول
+## السبب الجذري
 
-### 1. إضافة خانة سعر البيع في أصناف المشتريات
-**الملف:** `src/pages/Purchases.tsx`
-- إضافة حقل `sale_price` إلى `PurchaseItem` interface
-- عند إضافة صنف، يتم تعبئة `sale_price` من سعر البيع الحالي للمنتج
-- إضافة input "سعر البيع" بجانب "سعر الشراء" في كل صنف بالفاتورة
-- تحديث `updateItem` لدعم حقل `sale_price`
+الفواتير الموجودة (PUR-20260227-001 و PUR-20260224-001) تم إنشاؤها **قبل** تطبيق التعديلات البرمجية الأخيرة. الكود الجديد الذي يحدّث سعر التكلفة والخزينة ورصيد المورد موجود الآن لكنه لم يُطبَّق على البيانات القديمة.
 
-### 2. تحديث سعر التكلفة وسعر البيع في بطاقة الصنف عند الشراء
-**الملف:** `src/pages/Purchases.tsx` — دالة `handleSave`
-- بعد حفظ الفاتورة وتحديث المخزون، يتم تحديث `cost_price` و`sale_price` للمنتج من قيم الفاتورة:
-```
-await supabase.from('products').update({ cost_price: item.unit_price, sale_price: item.sale_price }).eq('id', item.product_id)
-```
+**الأدلة من قاعدة البيانات:**
+- `invoice_items` تحتوي أسعار صحيحة (مثلاً XARELTO 10MG بسعر 130.00)
+- لكن `products.cost_price` = 0.00 لجميع الأصناف
+- `treasury` فارغة تماماً (لا مصروفات مسجلة)
+- أرصدة الموردين الثلاثة = 0.00 (شركة العلمية، الديوان، البارينا)
 
-### 3. تسجيل قيمة المشتريات في الخزينة
-**الملف:** `src/pages/Purchases.tsx` — دالة `handleSave`
-- بعد حفظ الفاتورة، إدراج سجل في جدول `treasury`:
-```
-{ entry_type: 'expense', description: 'فاتورة مشتريات ...', amount: total, category: 'purchases', reference_id: inv.id }
-```
+## خطة الإصلاح
 
-### 4. تحديث رصيد المورد في الحسابات
-**الملف:** `src/pages/Purchases.tsx` — دالة `handleSave`
-- بعد حفظ الفاتورة، تحديث رصيد المورد (إضافة قيمة الفاتورة لأن المشتريات غير مسددة):
-```
-await supabase.from('contacts').update({ balance: selectedSupplier.balance + total }).eq('id', selectedSupplier.id)
-```
-- مع إبطال cache الـ contacts
+### 1. تحديث أسعار التكلفة من بيانات الفواتير الموجودة
+تشغيل SQL لتحديث `cost_price` في جدول `products` من آخر فاتورة شراء لكل صنف.
 
-### 5. إضافة حقل "رقم التشغيلة" اختياري في بطاقة الصنف
-- **قاعدة البيانات:** إضافة عمود `batch_number text` اختياري لجدول `products`
-- **`src/types/index.ts`:** إضافة `batch_number?: string` لـ `Product`
-- **`src/components/products/ProductModal.tsx`:** إضافة input "رقم التشغيلة" (اختياري) في النموذج
-- **`src/hooks/useSupabaseData.ts`:** إضافة `batch_number` في create/update product
+### 2. تسجيل مصروفات المشتريات في الخزينة
+إدراج سجلات في `treasury` للفاتورتين الموجودتين (21,060 د.ل و 4,202 د.ل).
+
+### 3. تحديث أرصدة الموردين
+- شركة العلمية: الفاتورة 21,060 (غير مسددة) → رصيد 21,060
+- الديوان: الفاتورة 4,202 (مسددة بالكامل paid=4202) → رصيد 0
+
+### التنفيذ
+سيتم عبر أوامر SQL مباشرة لتصحيح البيانات القديمة. الكود الحالي سيعمل بشكل صحيح للفواتير الجديدة.
 
 ## الملفات المتأثرة
-- `src/pages/Purchases.tsx` — سعر البيع + تحديث التكلفة + خزينة + رصيد المورد
-- `src/types/index.ts` — إضافة `batch_number`
-- `src/components/products/ProductModal.tsx` — حقل رقم التشغيلة
-- `src/hooks/useSupabaseData.ts` — إضافة `batch_number` في CRUD
-- **Migration:** إضافة عمود `batch_number` لجدول `products`
+- لا تغييرات على الكود - فقط تصحيح بيانات في قاعدة البيانات
 
