@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
@@ -20,10 +21,12 @@ import { exportToCSV, exportToPrintPDF } from '@/utils/exportUtils';
 interface PurchaseItem extends InvoiceItem {
   has_expiry?: boolean;
   expiry_date?: string;
+  sale_price?: number;
 }
 
 export default function Purchases() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { data: products = [], isLoading: loadingProducts } = useProducts();
   const { data: allContacts = [] } = useContacts('supplier');
   const { data: purchaseInvoices = [] } = useInvoices('purchase');
@@ -68,6 +71,7 @@ export default function Purchases() {
         total: product.cost_price,
         has_expiry: product.has_expiry || false,
         expiry_date: '',
+        sale_price: product.sale_price || 0,
       }]);
     }
   };
@@ -79,7 +83,7 @@ export default function Purchases() {
     else { toast({ title: 'غير موجود', description: 'لم يتم العثور على صنف بهذا الباركود', variant: 'destructive' }); }
   };
 
-  const updateItem = (itemId: string, field: 'quantity' | 'unit_price', value: number) => {
+  const updateItem = (itemId: string, field: 'quantity' | 'unit_price' | 'sale_price', value: number) => {
     setItems(items.map((i) => {
       if (i.id === itemId) {
         const updated = { ...i, [field]: value };
@@ -131,7 +135,7 @@ export default function Purchases() {
         })),
       });
 
-      // Save batches and update stock
+      // Save batches, update stock, and update product prices
       for (const item of items) {
         await updateStock.mutateAsync({ id: item.product_id, delta: item.quantity });
         // Create batch record for FEFO tracking
@@ -142,7 +146,31 @@ export default function Purchases() {
           original_quantity: item.quantity,
           expiry_date: item.has_expiry && item.expiry_date ? item.expiry_date : null,
         });
+        // Update product cost_price and sale_price
+        await supabase.from('products').update({
+          cost_price: item.unit_price,
+          sale_price: item.sale_price || 0,
+        }).eq('id', item.product_id);
       }
+
+      // Register purchase in treasury
+      await supabase.from('treasury').insert({
+        entry_type: 'expense',
+        description: `فاتورة مشتريات ${invoiceNumber} - ${selectedSupplier.name}`,
+        amount: total,
+        category: 'purchases',
+        reference_id: inv.id,
+      });
+
+      // Update supplier balance
+      await supabase.from('contacts').update({
+        balance: (selectedSupplier.balance || 0) + total,
+      }).eq('id', selectedSupplier.id);
+
+      // Invalidate caches
+      queryClient.invalidateQueries({ queryKey: ['contacts'] });
+      queryClient.invalidateQueries({ queryKey: ['treasury'] });
+      queryClient.invalidateQueries({ queryKey: ['products'] });
 
       toast({ title: 'تم حفظ فاتورة المشتريات', description: `فاتورة رقم ${invoiceNumber} - إجمالي ${total.toFixed(2)} د.ل من ${selectedSupplier.name}` });
       setItems([]);
@@ -243,7 +271,7 @@ export default function Purchases() {
                           <p className="font-medium text-card-foreground text-sm">{item.product_name}</p>
                           <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive" onClick={() => removeItem(item.id)}><Trash2 className="h-3 w-3" /></Button>
                         </div>
-                        <div className="mt-2 grid grid-cols-2 gap-2">
+                        <div className="mt-2 grid grid-cols-3 gap-2">
                           <div>
                             <Label className="text-xs">الكمية</Label>
                             <div className="flex items-center gap-1">
@@ -255,6 +283,10 @@ export default function Purchases() {
                           <div>
                             <Label className="text-xs">سعر الشراء</Label>
                             <Input type="number" value={item.unit_price} onChange={(e) => updateItem(item.id, 'unit_price', Math.max(0, +e.target.value))} className="h-6 text-xs" />
+                          </div>
+                          <div>
+                            <Label className="text-xs">سعر البيع</Label>
+                            <Input type="number" value={item.sale_price || 0} onChange={(e) => updateItem(item.id, 'sale_price', Math.max(0, +e.target.value))} className="h-6 text-xs" />
                           </div>
                         </div>
                         {item.has_expiry && (

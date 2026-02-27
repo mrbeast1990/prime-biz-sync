@@ -79,6 +79,7 @@ export function ProductModal({ isOpen, onClose, onSave, product }: ProductModalP
     barcode: '', trade_name: '', scientific_name: '', category: '',
     packaging_type: 'علبة', units_per_package: 1, has_expiry: true,
     image_url: '', stock_quantity: 0, min_stock: 10, cost_price: 0, sale_price: 0,
+    batch_number: '',
   });
 
   useEffect(() => {
@@ -90,6 +91,7 @@ export function ProductModal({ isOpen, onClose, onSave, product }: ProductModalP
         has_expiry: product.has_expiry ?? true, image_url: product.image_url || '',
         stock_quantity: product.stock_quantity, min_stock: product.min_stock,
         cost_price: product.cost_price, sale_price: product.sale_price,
+        batch_number: product.batch_number || '',
       });
       setIsShortcut(getShortcuts().includes(product.id));
     } else {
@@ -97,6 +99,7 @@ export function ProductModal({ isOpen, onClose, onSave, product }: ProductModalP
         barcode: generateCode(), trade_name: '', scientific_name: '', category: '',
         packaging_type: 'علبة', units_per_package: 1, has_expiry: true,
         image_url: '', stock_quantity: 0, min_stock: 10, cost_price: 0, sale_price: 0,
+        batch_number: '',
       });
       setIsShortcut(false);
     }
@@ -237,7 +240,7 @@ export function ProductModal({ isOpen, onClose, onSave, product }: ProductModalP
               placeholder="رابط الصورة" className="input-focus" />
           </div>
 
-          <div className="grid grid-cols-4 gap-4">
+          <div className="grid grid-cols-5 gap-4">
             <div className="space-y-2">
               <Label htmlFor="cost_price">سعر التكلفة</Label>
               <Input id="cost_price" ref={setRef(6)} type="number" min="0" step="0.01"
@@ -267,8 +270,15 @@ export function ProductModal({ isOpen, onClose, onSave, product }: ProductModalP
               <Input id="min_stock" ref={setRef(9)} type="number" min="0"
                 value={formData.min_stock}
                 onChange={(e) => setFormData({ ...formData, min_stock: Number(e.target.value) })}
-                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); /* submit or do nothing */ } }}
+                onKeyDown={(e) => handleEnterNav(e, 9)}
                 className="input-focus" required />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="batch_number">رقم التشغيلة</Label>
+              <Input id="batch_number" ref={setRef(10)} value={formData.batch_number}
+                onChange={(e) => setFormData({ ...formData, batch_number: e.target.value })}
+                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); } }}
+                placeholder="اختياري" className="input-focus" />
             </div>
           </div>
 
