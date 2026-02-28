@@ -1,55 +1,29 @@
 
 
-# خطة التعديلات المطلوبة
+# خطة: تحويل التطبيق إلى PWA قابل للتثبيت
 
-## المطلوب (4 محاور رئيسية)
+## التغييرات المطلوبة
 
-### 1. كشف حساب مورد (مدين/دائن) + تعديل/إلغاء السداد
-**في `AccountDetailsDialog.tsx`:**
-- إضافة زر "طباعة كشف حساب" يطبع تقرير مدين/دائن (المشتريات = مدين، السدادات = دائن)
-- في جدول الحركات: إضافة عمود "مدين/دائن" وعمود "نوع العملية" (فاتورة / إيصال سداد)
-- إضافة خيار تعديل أو إلغاء إيصال السداد (إرجاع المبلغ المسدد من الفاتورة)
+### 1. تثبيت `vite-plugin-pwa`
+- إضافة حزمة `vite-plugin-pwa` كـ dependency
 
-**في `printUtils.ts`:**
-- إضافة دالة `printAccountStatement` لطباعة كشف حساب احترافي بنمط مدين/دائن مع الرصيد التراكمي
+### 2. إعداد `vite.config.ts`
+- إضافة `VitePWA` plugin مع manifest كامل (اسم التطبيق، الأيقونات، الألوان، display: standalone)
+- إضافة `navigateFallbackDenylist: [/^\/~oauth/]` للـ service worker
 
-### 2. إعدادات الصيدلية: شعار + نماذج فواتير
-**في `Settings.tsx`:**
-- إضافة خانة رفع شعار (upload to storage bucket `product-images` أو bucket جديد)
-- حفظ URL الشعار في جدول `settings` بمفتاح `pharmacy_logo`
-- إضافة قسم "نماذج الفواتير" مع 2-3 نماذج مختلفة (كلاسيكي، حديث، بسيط) يتم حفظ الاختيار في `settings`
+### 3. إنشاء أيقونات PWA في `public/`
+- `pwa-192x192.png` و `pwa-512x512.png` (أيقونات SVG مولدة برمجياً)
 
-**في `useSettings.ts` و `PharmacySettings` type:**
-- إضافة حقل `logo` وحقل `invoiceTemplate` للنوع
+### 4. تحديث `index.html`
+- إضافة `<meta name="theme-color">` و `<meta name="apple-mobile-web-app-capable">` و `<link rel="apple-touch-icon">`
 
-**في `printUtils.ts`:**
-- تعديل `buildPage` لعرض الشعار في الـ header
-- إضافة دعم نماذج الفواتير المختلفة
+### 5. إنشاء صفحة تثبيت `/install`
+- مكون بسيط يشرح كيفية تثبيت التطبيق ويعرض زر التثبيت عبر `beforeinstallprompt` event
 
-**Storage bucket:** إنشاء bucket `pharmacy-assets` أو استخدام `product-images` الموجود
-
-### 3. بطاقة الصنف: الحد الأدنى + طباعة بدل تصدير
-**في `ProductModal.tsx`:**
-- تغيير القيمة الافتراضية لـ `min_stock` من 10 إلى 0
-
-**في `Products.tsx`:**
-- تغيير زر "تصدير" إلى "طباعة" مع dropdown (PDF / Excel)
-- عند الطباعة PDF: طباعة جدول كامل بكل بيانات المنتجات بشكل متناسق
-- عند Excel: نفس `exportProductsToCSV` الموجود
-
-### 4. تحويل الأرقام والتواريخ إلى إنجليزية
-**في `AccountDetailsDialog.tsx` و `Treasury.tsx` وأي مكان يستخدم `toLocaleDateString('ar-SA')`:**
-- تغيير التنسيق لاستخدام أرقام إنجليزية: `toLocaleDateString('en-GB')` أو تنسيق مخصص
-- التأكد من أن جميع الأرقام المالية تظهر بأرقام إنجليزية (0-9) بدل العربية
-
-## الملفات المتأثرة
-- `src/types/index.ts` - إضافة `logo` و `invoiceTemplate` لـ PharmacySettings
-- `src/hooks/useSettings.ts` - جلب الحقول الجديدة
-- `src/pages/Settings.tsx` - رفع شعار + نماذج فواتير + حفظ فعلي في DB
-- `src/utils/printUtils.ts` - شعار في header + كشف حساب + نماذج
-- `src/components/accounts/AccountDetailsDialog.tsx` - مدين/دائن + كشف حساب + تعديل سداد + أرقام إنجليزية
-- `src/pages/Treasury.tsx` - أرقام إنجليزية
-- `src/components/products/ProductModal.tsx` - min_stock = 0
-- `src/pages/Products.tsx` - زر طباعة بدل تصدير
-- `src/utils/exportUtils.ts` - دالة طباعة PDF للمنتجات
+### الملفات المتأثرة
+- `vite.config.ts` - إضافة VitePWA plugin
+- `index.html` - meta tags للـ PWA
+- `public/pwa-192x192.svg` و `public/pwa-512x512.svg` - أيقونات
+- `src/pages/Install.tsx` - صفحة تثبيت (جديد)
+- `src/App.tsx` - إضافة route `/install`
 
