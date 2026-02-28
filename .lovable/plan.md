@@ -1,35 +1,55 @@
 
 
-# خطة: تعديل العمليات + طباعة PDF احترافية في الحسابات
+# خطة التعديلات المطلوبة
 
-## ملخص
-إضافة إمكانية تعديل الفواتير وعمليات السداد وعمليات التأمين من داخل شاشة تفاصيل الحساب، مع إمكانية طباعة أي عملية كملف PDF احترافي يتضمن بيانات الصيدلية (الاسم، الهاتف، العنوان).
+## المطلوب (4 محاور رئيسية)
 
-## التغييرات المطلوبة
+### 1. كشف حساب مورد (مدين/دائن) + تعديل/إلغاء السداد
+**في `AccountDetailsDialog.tsx`:**
+- إضافة زر "طباعة كشف حساب" يطبع تقرير مدين/دائن (المشتريات = مدين، السدادات = دائن)
+- في جدول الحركات: إضافة عمود "مدين/دائن" وعمود "نوع العملية" (فاتورة / إيصال سداد)
+- إضافة خيار تعديل أو إلغاء إيصال السداد (إرجاع المبلغ المسدد من الفاتورة)
 
-### 1. إنشاء مكون PDF احترافي (`src/utils/printUtils.ts`)
-- دالة `printInvoicePDF` تفتح نافذة طباعة بتصميم احترافي:
-  - **Header**: اسم الصيدلية (من جدول settings)، لوجو، عنوان "فاتورة" أو "إيصال سداد"
-  - **Body**: بيانات العميل/المورد، جدول الأصناف، الإجماليات
-  - **Footer**: رقم الهاتف والعنوان
-- دالة `printPaymentReceipt` لطباعة إيصال سداد بنفس التصميم
+**في `printUtils.ts`:**
+- إضافة دالة `printAccountStatement` لطباعة كشف حساب احترافي بنمط مدين/دائن مع الرصيد التراكمي
 
-### 2. إضافة hook لجلب إعدادات الصيدلية (`src/hooks/useSettings.ts`)
-- `useSettings()` يجلب بيانات الصيدلية من جدول `settings`
+### 2. إعدادات الصيدلية: شعار + نماذج فواتير
+**في `Settings.tsx`:**
+- إضافة خانة رفع شعار (upload to storage bucket `product-images` أو bucket جديد)
+- حفظ URL الشعار في جدول `settings` بمفتاح `pharmacy_logo`
+- إضافة قسم "نماذج الفواتير" مع 2-3 نماذج مختلفة (كلاسيكي، حديث، بسيط) يتم حفظ الاختيار في `settings`
 
-### 3. تعديل `AccountDetailsDialog.tsx` بشكل جوهري
-- **زر تعديل على كل عملية**: أيقونة تعديل بجانب كل فاتورة/عملية تأمين
-- **زر طباعة PDF على كل عملية**: أيقونة طباعة تستدعي `printInvoicePDF`
-- **تعديل الفواتير**: فتح dialog لتعديل أصناف الفاتورة (الكمية، السعر) باستخدام `useUpdateInvoiceItem`
-- **تعديل عمليات السداد**: إمكانية تعديل المبلغ المسدد وطريقة الدفع
-- **طباعة إيصال السداد**: زر PDF على كل عملية سداد
+**في `useSettings.ts` و `PharmacySettings` type:**
+- إضافة حقل `logo` وحقل `invoiceTemplate` للنوع
 
-### 4. تعديل `useSupabaseData.ts`
-- إضافة `useUpdateContact()` لتفعيل حفظ تعديلات بيانات الزبائن/الموردين فعلياً (حالياً `saveEdit` لا يحفظ في قاعدة البيانات)
+**في `printUtils.ts`:**
+- تعديل `buildPage` لعرض الشعار في الـ header
+- إضافة دعم نماذج الفواتير المختلفة
 
-### الملفات المتأثرة
-- `src/utils/printUtils.ts` (جديد)
-- `src/hooks/useSettings.ts` (جديد)  
-- `src/components/accounts/AccountDetailsDialog.tsx` (تعديل جوهري)
-- `src/hooks/useSupabaseData.ts` (إضافة hooks)
+**Storage bucket:** إنشاء bucket `pharmacy-assets` أو استخدام `product-images` الموجود
+
+### 3. بطاقة الصنف: الحد الأدنى + طباعة بدل تصدير
+**في `ProductModal.tsx`:**
+- تغيير القيمة الافتراضية لـ `min_stock` من 10 إلى 0
+
+**في `Products.tsx`:**
+- تغيير زر "تصدير" إلى "طباعة" مع dropdown (PDF / Excel)
+- عند الطباعة PDF: طباعة جدول كامل بكل بيانات المنتجات بشكل متناسق
+- عند Excel: نفس `exportProductsToCSV` الموجود
+
+### 4. تحويل الأرقام والتواريخ إلى إنجليزية
+**في `AccountDetailsDialog.tsx` و `Treasury.tsx` وأي مكان يستخدم `toLocaleDateString('ar-SA')`:**
+- تغيير التنسيق لاستخدام أرقام إنجليزية: `toLocaleDateString('en-GB')` أو تنسيق مخصص
+- التأكد من أن جميع الأرقام المالية تظهر بأرقام إنجليزية (0-9) بدل العربية
+
+## الملفات المتأثرة
+- `src/types/index.ts` - إضافة `logo` و `invoiceTemplate` لـ PharmacySettings
+- `src/hooks/useSettings.ts` - جلب الحقول الجديدة
+- `src/pages/Settings.tsx` - رفع شعار + نماذج فواتير + حفظ فعلي في DB
+- `src/utils/printUtils.ts` - شعار في header + كشف حساب + نماذج
+- `src/components/accounts/AccountDetailsDialog.tsx` - مدين/دائن + كشف حساب + تعديل سداد + أرقام إنجليزية
+- `src/pages/Treasury.tsx` - أرقام إنجليزية
+- `src/components/products/ProductModal.tsx` - min_stock = 0
+- `src/pages/Products.tsx` - زر طباعة بدل تصدير
+- `src/utils/exportUtils.ts` - دالة طباعة PDF للمنتجات
 
