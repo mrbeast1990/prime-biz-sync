@@ -144,4 +144,6 @@ export interface PharmacySettings {
   phone: string;
   address: string;
   receiptSize: 'A4' | '80mm' | '58mm';
+  logo?: string;
+  invoiceTemplate?: 'classic' | 'modern' | 'simple';
 }

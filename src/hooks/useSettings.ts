@@ -15,6 +15,8 @@ export function useSettings() {
         phone: map['pharmacy_phone'] || '',
         address: map['pharmacy_address'] || '',
         receiptSize: (map['receipt_size'] || '80mm') as PharmacySettings['receiptSize'],
+        logo: map['pharmacy_logo'] || '',
+        invoiceTemplate: (map['invoice_template'] || 'classic') as PharmacySettings['invoiceTemplate'],
       } as PharmacySettings;
     },
   });
