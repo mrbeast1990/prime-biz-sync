@@ -116,6 +116,18 @@ export function useCreateContact() {
   });
 }
 
+// Update Contact
+export function useUpdateContact() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, ...data }: { id: string; name?: string; phone?: string; address?: string }) => {
+      const { error } = await supabase.from('contacts').update(data).eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['contacts'] }),
+  });
+}
+
 // Insurance Customers
 export function useInsuranceCustomers() {
   return useQuery({

@@ -7,9 +7,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Contact, InsuranceCustomer } from '@/types';
-import { Edit, FileText, Save, ChevronDown, CreditCard, Banknote, Wallet } from 'lucide-react';
+import { Edit, FileText, Save, ChevronDown, Wallet, Printer } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
-import { useInvoices, useInsuranceSales, useInvoiceItems, useInsuranceSaleItems, useUpdateInvoice } from '@/hooks/useSupabaseData';
+import { useInvoices, useInsuranceSales, useInvoiceItems, useInsuranceSaleItems, useUpdateInvoice, useUpdateInvoiceItem, useUpdateContact, useUpdateInsuranceCustomer } from '@/hooks/useSupabaseData';
+import { useSettings } from '@/hooks/useSettings';
+import { printInvoicePDF, printPaymentReceipt } from '@/utils/printUtils';
 import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
 
@@ -21,51 +23,113 @@ interface AccountDetailsDialogProps {
   type: 'customer' | 'supplier' | 'insurance';
 }
 
-function TransactionItemsRow({ transactionId, type }: { transactionId: string; type: 'invoice' | 'insurance' }) {
+// ── Editable Items Row ──
+function EditableItemsRow({ transactionId, type, isEditing, onSaved }: { transactionId: string; type: 'invoice' | 'insurance'; isEditing: boolean; onSaved?: () => void }) {
   const { data: invoiceItems = [] } = useInvoiceItems(type === 'invoice' ? transactionId : undefined);
   const { data: insuranceItems = [] } = useInsuranceSaleItems(type === 'insurance' ? transactionId : undefined);
+  const updateItem = useUpdateInvoiceItem();
   const items = type === 'invoice' ? invoiceItems : insuranceItems;
+  const [edits, setEdits] = useState<Record<string, { quantity: number; unit_price: number }>>({});
 
   if (items.length === 0) return <p className="text-sm text-muted-foreground py-2 text-center">لا توجد تفاصيل أصناف</p>;
 
+  const handleEditChange = (id: string, field: 'quantity' | 'unit_price', value: number) => {
+    const item: any = items.find((i: any) => i.id === id);
+    const current = edits[id] || { quantity: item.quantity, unit_price: Number(item.unit_price) };
+    setEdits({ ...edits, [id]: { ...current, [field]: value } });
+  };
+
+  const handleSaveAll = async () => {
+    try {
+      for (const [id, edit] of Object.entries(edits)) {
+        await updateItem.mutateAsync({ id, quantity: edit.quantity, unit_price: edit.unit_price, total: edit.quantity * edit.unit_price });
+      }
+      // Recalculate invoice total
+      if (type === 'invoice') {
+        let newTotal = 0;
+        items.forEach((item: any) => {
+          const edit = edits[item.id];
+          newTotal += edit ? edit.quantity * edit.unit_price : Number(item.total);
+        });
+        const { error } = await supabase.from('invoices').update({ total: newTotal }).eq('id', transactionId);
+        if (error) throw error;
+      }
+      setEdits({});
+      onSaved?.();
+      toast({ title: 'تم الحفظ', description: 'تم تحديث الأصناف بنجاح' });
+    } catch {
+      toast({ title: 'خطأ', description: 'فشل حفظ التعديلات', variant: 'destructive' });
+    }
+  };
+
   return (
-    <div className="rounded-md border bg-muted/30 overflow-hidden">
-      <Table>
-        <TableHeader><TableRow className="text-xs">
-          <TableHead className="text-right py-1.5">الصنف</TableHead>
-          <TableHead className="text-right py-1.5">الكمية</TableHead>
-          <TableHead className="text-right py-1.5">السعر</TableHead>
-          <TableHead className="text-right py-1.5">الإجمالي</TableHead>
-        </TableRow></TableHeader>
-        <TableBody>
-          {items.map((item: any) => (
-            <TableRow key={item.id} className="text-xs">
-              <TableCell className="py-1.5">{item.product_name}</TableCell>
-              <TableCell className="py-1.5 tabular-nums">{item.quantity}</TableCell>
-              <TableCell className="py-1.5 tabular-nums">{Number(item.unit_price).toFixed(2)}</TableCell>
-              <TableCell className="py-1.5 tabular-nums">{Number(item.total).toFixed(2)} د.ل</TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+    <div className="space-y-2">
+      <div className="rounded-md border bg-muted/30 overflow-hidden">
+        <Table>
+          <TableHeader><TableRow className="text-xs">
+            <TableHead className="text-right py-1.5">الصنف</TableHead>
+            <TableHead className="text-right py-1.5">الكمية</TableHead>
+            <TableHead className="text-right py-1.5">السعر</TableHead>
+            <TableHead className="text-right py-1.5">الإجمالي</TableHead>
+          </TableRow></TableHeader>
+          <TableBody>
+            {items.map((item: any) => {
+              const edit = edits[item.id];
+              const qty = edit?.quantity ?? item.quantity;
+              const price = edit?.unit_price ?? Number(item.unit_price);
+              return (
+                <TableRow key={item.id} className="text-xs">
+                  <TableCell className="py-1.5">{item.product_name}</TableCell>
+                  <TableCell className="py-1.5">
+                    {isEditing && type === 'invoice' ? (
+                      <Input type="number" min={1} value={qty} className="h-7 w-16 text-xs"
+                        onChange={e => handleEditChange(item.id, 'quantity', Number(e.target.value))} />
+                    ) : <span className="tabular-nums">{qty}</span>}
+                  </TableCell>
+                  <TableCell className="py-1.5">
+                    {isEditing && type === 'invoice' ? (
+                      <Input type="number" min={0} step="0.01" value={price} className="h-7 w-20 text-xs"
+                        onChange={e => handleEditChange(item.id, 'unit_price', Number(e.target.value))} />
+                    ) : <span className="tabular-nums">{price.toFixed(2)}</span>}
+                  </TableCell>
+                  <TableCell className="py-1.5 tabular-nums">{(qty * price).toFixed(2)} د.ل</TableCell>
+                </TableRow>
+              );
+            })}
+          </TableBody>
+        </Table>
+      </div>
+      {isEditing && Object.keys(edits).length > 0 && (
+        <Button size="sm" onClick={handleSaveAll} disabled={updateItem.isPending} className="w-full">
+          <Save className="h-3 w-3 ml-1" /> حفظ التعديلات
+        </Button>
+      )}
     </div>
   );
 }
 
+// ── Main Dialog ──
 export function AccountDetailsDialog({ isOpen, onClose, contact, insuranceCustomer, type }: AccountDetailsDialogProps) {
   const { data: invoices = [] } = useInvoices();
   const { data: insuranceSales = [] } = useInsuranceSales();
+  const { data: settings } = useSettings();
   const updateInvoice = useUpdateInvoice();
+  const updateContact = useUpdateContact();
+  const updateInsuranceCustomer = useUpdateInsuranceCustomer();
+
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({ name: '', phone: '', address: '', card_number: '' });
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [editingTransactionId, setEditingTransactionId] = useState<string | null>(null);
   
-  // Payment state for supplier invoices
+  // Payment state
   const [showPayment, setShowPayment] = useState(false);
   const [paymentInvoiceId, setPaymentInvoiceId] = useState<string | null>(null);
   const [paymentAmount, setPaymentAmount] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('cash');
   const [paymentDate, setPaymentDate] = useState(() => new Date().toISOString().slice(0, 10));
+
+  const defaultSettings = settings || { name: 'صيدلية النور', phone: '', address: '', receiptSize: '80mm' as const };
 
   const startEdit = () => {
     if (type === 'insurance' && insuranceCustomer) {
@@ -76,9 +140,18 @@ export function AccountDetailsDialog({ isOpen, onClose, contact, insuranceCustom
     setEditing(true);
   };
 
-  const saveEdit = () => {
-    setEditing(false);
-    toast({ title: 'تم الحفظ', description: 'تم تحديث البيانات بنجاح' });
+  const saveEdit = async () => {
+    try {
+      if (type === 'insurance' && insuranceCustomer) {
+        await updateInsuranceCustomer.mutateAsync({ id: insuranceCustomer.id, name: form.name, phone: form.phone, card_number: form.card_number });
+      } else if (contact) {
+        await updateContact.mutateAsync({ id: contact.id, name: form.name, phone: form.phone, address: form.address });
+      }
+      setEditing(false);
+      toast({ title: 'تم الحفظ', description: 'تم تحديث البيانات بنجاح' });
+    } catch {
+      toast({ title: 'خطأ', description: 'فشل حفظ البيانات', variant: 'destructive' });
+    }
   };
 
   const getName = () => type === 'insurance' ? insuranceCustomer?.name : contact?.name;
@@ -134,6 +207,33 @@ export function AccountDetailsDialog({ isOpen, onClose, contact, insuranceCustom
     }
   };
 
+  const handlePrintInvoice = async (t: any) => {
+    const { data: items } = await supabase
+      .from(type === 'insurance' ? 'insurance_sale_items' as any : 'invoice_items')
+      .select('*')
+      .eq(type === 'insurance' ? 'sale_id' : 'invoice_id', t.id);
+
+    printInvoicePDF({
+      invoiceNumber: t.invoice_number,
+      date: new Date(t.invoice_date || t.sale_date).toLocaleDateString('ar-SA'),
+      contactName: getName() || '',
+      items: (items || []).map((i: any) => ({ product_name: i.product_name, quantity: i.quantity, unit_price: Number(i.unit_price), total: Number(i.total) })),
+      total: Number(t.total),
+      paid: Number(t.paid || 0),
+      invoiceType: t.invoice_type || 'sale',
+    }, defaultSettings);
+  };
+
+  const handlePrintPayment = (t: any) => {
+    printPaymentReceipt({
+      date: new Date(t.invoice_date || t.sale_date).toLocaleDateString('ar-SA'),
+      contactName: getName() || '',
+      amount: Number(t.paid || 0),
+      paymentMethod: t.payment_method || 'cash',
+      invoiceNumber: t.invoice_number,
+    }, defaultSettings);
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-2xl max-h-[85vh] overflow-y-auto">
@@ -173,11 +273,11 @@ export function AccountDetailsDialog({ isOpen, onClose, contact, insuranceCustom
                 {transactions.map((t: any) => {
                   const remaining = Number(t.total) - Number(t.paid || 0);
                   const isPaid = remaining <= 0;
+                  const isEditingThis = editingTransactionId === t.id;
                   return (
                     <div key={t.id} className="rounded-lg border overflow-hidden">
-                      <button onClick={() => toggleExpand(t.id)}
-                        className="w-full flex items-center justify-between p-3 hover:bg-muted/50 transition-colors">
-                        <div className="flex items-center gap-3">
+                      <div className="flex items-center justify-between p-3 hover:bg-muted/50 transition-colors">
+                        <button onClick={() => toggleExpand(t.id)} className="flex items-center gap-3 flex-1">
                           <ChevronDown className={cn("h-4 w-4 text-muted-foreground transition-transform", expandedId === t.id && "rotate-180")} />
                           <span className="text-sm">{new Date(t.invoice_date || t.sale_date).toLocaleDateString('ar-SA')}</span>
                           {type === 'supplier' && (
@@ -186,20 +286,45 @@ export function AccountDetailsDialog({ isOpen, onClose, contact, insuranceCustom
                               {isPaid ? 'مسددة' : `متبقي ${remaining.toFixed(2)} د.ل`}
                             </span>
                           )}
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <span className="tabular-nums font-medium text-sm">{Number(t.total).toFixed(2)} د.ل</span>
+                        </button>
+                        <div className="flex items-center gap-1">
+                          <span className="tabular-nums font-medium text-sm ml-2">{Number(t.total).toFixed(2)} د.ل</span>
+                          {/* Print Invoice */}
+                          <Button variant="ghost" size="icon" className="h-7 w-7" title="طباعة فاتورة"
+                            onClick={() => handlePrintInvoice(t)}>
+                            <Printer className="h-3.5 w-3.5" />
+                          </Button>
+                          {/* Print Payment Receipt (if has paid amount) */}
+                          {Number(t.paid || 0) > 0 && (
+                            <Button variant="ghost" size="icon" className="h-7 w-7" title="طباعة إيصال سداد"
+                              onClick={() => handlePrintPayment(t)}>
+                              <FileText className="h-3.5 w-3.5" />
+                            </Button>
+                          )}
+                          {/* Edit toggle */}
+                          {type !== 'insurance' && (
+                            <Button variant="ghost" size="icon" className="h-7 w-7" title="تعديل"
+                              onClick={() => setEditingTransactionId(isEditingThis ? null : t.id)}>
+                              <Edit className={cn("h-3.5 w-3.5", isEditingThis && "text-primary")} />
+                            </Button>
+                          )}
+                          {/* Payment button for suppliers */}
                           {type === 'supplier' && !isPaid && (
                             <Button variant="outline" size="sm" className="h-7 text-xs gap-1"
-                              onClick={(e) => { e.stopPropagation(); openPayment(t.id); }}>
+                              onClick={() => openPayment(t.id)}>
                               <Wallet className="h-3 w-3" /> سداد
                             </Button>
                           )}
                         </div>
-                      </button>
+                      </div>
                       {expandedId === t.id && (
                         <div className="px-3 pb-3">
-                          <TransactionItemsRow transactionId={t.id} type={type === 'insurance' ? 'insurance' : 'invoice'} />
+                          <EditableItemsRow
+                            transactionId={t.id}
+                            type={type === 'insurance' ? 'insurance' : 'invoice'}
+                            isEditing={isEditingThis}
+                            onSaved={() => setEditingTransactionId(null)}
+                          />
                         </div>
                       )}
                     </div>
