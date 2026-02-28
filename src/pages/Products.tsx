@@ -5,14 +5,18 @@ import { ProductModal } from '@/components/products/ProductModal';
 import { ImportPreviewDialog } from '@/components/products/ImportPreviewDialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Plus, Search, Download, Upload, Filter, Loader2 } from 'lucide-react';
+import { Plus, Search, Upload, Filter, Loader2, Printer, FileText, FileDown } from 'lucide-react';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Product } from '@/types';
 import { toast } from '@/hooks/use-toast';
 import { useProducts, useCreateProduct, useUpdateProduct, useDeleteProduct } from '@/hooks/useSupabaseData';
+import { useSettings } from '@/hooks/useSettings';
 import { exportProductsToCSV, parseCSV, mapCSVToProducts } from '@/utils/exportUtils';
+import { printProductsTable } from '@/utils/printUtils';
 
 export default function Products() {
   const { data: products = [], isLoading } = useProducts();
+  const { data: settings } = useSettings();
   const createProduct = useCreateProduct();
   const updateProduct = useUpdateProduct();
   const deleteProduct = useDeleteProduct();
@@ -22,6 +26,8 @@ export default function Products() {
   const [importProducts, setImportProducts] = useState<Partial<Product>[]>([]);
   const [isImportOpen, setIsImportOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const defaultSettings = settings || { name: 'صيدلية النور', phone: '', address: '', receiptSize: '80mm' as const };
 
   const filteredProducts = products.filter(
     (product) =>
@@ -68,7 +74,15 @@ export default function Products() {
     setIsModalOpen(true);
   };
 
-  const handleExport = () => {
+  const handlePrintPDF = () => {
+    if (products.length === 0) {
+      toast({ title: 'لا توجد بيانات', description: 'لا توجد منتجات للطباعة', variant: 'destructive' });
+      return;
+    }
+    printProductsTable(products, defaultSettings);
+  };
+
+  const handleExportExcel = () => {
     if (products.length === 0) {
       toast({ title: 'لا توجد بيانات', description: 'لا توجد منتجات لتصديرها', variant: 'destructive' });
       return;
@@ -97,7 +111,6 @@ export default function Products() {
       setIsImportOpen(true);
     };
     reader.readAsText(file, 'UTF-8');
-    // Reset so same file can be re-selected
     e.target.value = '';
   };
 
@@ -143,7 +156,19 @@ export default function Products() {
           <Button variant="outline" size="icon"><Filter className="h-4 w-4" /></Button>
         </div>
         <div className="flex gap-3">
-          <Button variant="outline" className="gap-2" onClick={handleExport}><Download className="h-4 w-4" />تصدير</Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" className="gap-2"><Printer className="h-4 w-4" />طباعة</Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={handlePrintPDF} className="gap-2">
+                <FileText className="h-4 w-4" /> PDF
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleExportExcel} className="gap-2">
+                <FileDown className="h-4 w-4" /> Excel
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
           <Button variant="outline" className="gap-2" onClick={handleImportClick}><Upload className="h-4 w-4" />استيراد</Button>
           <Button onClick={handleAddNew} className="gap-2"><Plus className="h-4 w-4" />إضافة صنف</Button>
         </div>

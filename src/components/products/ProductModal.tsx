@@ -78,10 +78,9 @@ export function ProductModal({ isOpen, onClose, onSave, product }: ProductModalP
   const [formData, setFormData] = useState({
     barcode: '', trade_name: '', scientific_name: '', category: '',
     packaging_type: 'علبة', units_per_package: 1, has_expiry: true,
-    image_url: '', stock_quantity: 0, min_stock: 10, cost_price: 0, sale_price: 0,
+    image_url: '', stock_quantity: 0, min_stock: 0, cost_price: 0, sale_price: 0,
     batch_number: '',
   });
-
   useEffect(() => {
     if (product) {
       setFormData({
@@ -98,7 +97,7 @@ export function ProductModal({ isOpen, onClose, onSave, product }: ProductModalP
       setFormData({
         barcode: generateCode(), trade_name: '', scientific_name: '', category: '',
         packaging_type: 'علبة', units_per_package: 1, has_expiry: true,
-        image_url: '', stock_quantity: 0, min_stock: 10, cost_price: 0, sale_price: 0,
+        image_url: '', stock_quantity: 0, min_stock: 0, cost_price: 0, sale_price: 0,
         batch_number: '',
       });
       setIsShortcut(false);

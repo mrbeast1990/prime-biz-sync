@@ -8,11 +8,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { Wallet, TrendingUp, TrendingDown, Plus, ArrowUpCircle, ArrowDownCircle, Loader2, Users, Eye, FileDown, FileText, Save, Edit } from 'lucide-react';
+import { Wallet, TrendingUp, TrendingDown, Plus, ArrowUpCircle, ArrowDownCircle, Loader2, Users, FileDown, FileText, Save, Edit } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { useTreasuryEntries, useCreateTreasuryEntry, useInvoices, useProfiles, useInvoiceItems, useUpdateInvoiceItem } from '@/hooks/useSupabaseData';
 import { cn } from '@/lib/utils';
 import { exportToCSV, exportToPrintPDF } from '@/utils/exportUtils';
+
+const fmtDate = (d: string) => new Date(d).toLocaleDateString('en-GB');
+const fmtNum = (n: number) => n.toFixed(2);
 
 export default function Treasury() {
   const { data: entries = [], isLoading } = useTreasuryEntries();
@@ -25,7 +28,6 @@ export default function Treasury() {
   const [sellerView, setSellerView] = useState<'summary' | 'detail'>('summary');
   const [editInvoiceId, setEditInvoiceId] = useState<string | null>(null);
 
-  // Exclude insurance sales from treasury
   const salesTotal = entries.filter(e => e.category === 'sales').reduce((s, e) => s + Number(e.amount), 0);
   const purchasesTotal = entries.filter(e => e.category === 'purchases').reduce((s, e) => s + Number(e.amount), 0);
   const withdrawals = entries.filter(e => e.entry_type === 'withdrawal').reduce((s, e) => s + Number(e.amount), 0);
@@ -52,7 +54,6 @@ export default function Treasury() {
     }
   };
 
-  // Seller safes logic
   const getSellerInvoices = (userId: string) => {
     return allInvoices.filter(i => i.created_by === userId && ['sale', 'return', 'damage', 'purchase'].includes(i.invoice_type));
   };
@@ -80,9 +81,9 @@ export default function Treasury() {
         <TabsContent value="general">
           <div className="space-y-6">
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-              <Card className="border-0 shadow-card"><CardContent className="p-6"><div className="flex items-center gap-4"><div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10"><Wallet className="h-6 w-6 text-primary" /></div><div><p className="text-sm text-muted-foreground">الرصيد الحالي</p><p className="text-2xl font-bold text-foreground">{currentBalance.toFixed(2)} د.ل</p></div></div></CardContent></Card>
-              <Card className="border-0 shadow-card"><CardContent className="p-6"><div className="flex items-center gap-4"><div className="flex h-12 w-12 items-center justify-center rounded-xl bg-success/10"><TrendingUp className="h-6 w-6 text-success" /></div><div><p className="text-sm text-muted-foreground">المبيعات النقدية</p><p className="text-2xl font-bold text-foreground">{salesTotal.toFixed(2)} د.ل</p></div></div></CardContent></Card>
-              <Card className="border-0 shadow-card"><CardContent className="p-6"><div className="flex items-center gap-4"><div className="flex h-12 w-12 items-center justify-center rounded-xl bg-destructive/10"><TrendingDown className="h-6 w-6 text-destructive" /></div><div><p className="text-sm text-muted-foreground">المشتريات</p><p className="text-2xl font-bold text-foreground">{purchasesTotal.toFixed(2)} د.ل</p></div></div></CardContent></Card>
+              <Card className="border-0 shadow-card"><CardContent className="p-6"><div className="flex items-center gap-4"><div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10"><Wallet className="h-6 w-6 text-primary" /></div><div><p className="text-sm text-muted-foreground">الرصيد الحالي</p><p className="text-2xl font-bold text-foreground tabular-nums">{fmtNum(currentBalance)} د.ل</p></div></div></CardContent></Card>
+              <Card className="border-0 shadow-card"><CardContent className="p-6"><div className="flex items-center gap-4"><div className="flex h-12 w-12 items-center justify-center rounded-xl bg-success/10"><TrendingUp className="h-6 w-6 text-success" /></div><div><p className="text-sm text-muted-foreground">المبيعات النقدية</p><p className="text-2xl font-bold text-foreground tabular-nums">{fmtNum(salesTotal)} د.ل</p></div></div></CardContent></Card>
+              <Card className="border-0 shadow-card"><CardContent className="p-6"><div className="flex items-center gap-4"><div className="flex h-12 w-12 items-center justify-center rounded-xl bg-destructive/10"><TrendingDown className="h-6 w-6 text-destructive" /></div><div><p className="text-sm text-muted-foreground">المشتريات</p><p className="text-2xl font-bold text-foreground tabular-nums">{fmtNum(purchasesTotal)} د.ل</p></div></div></CardContent></Card>
             </div>
 
             <Card className="border-0 shadow-card">
@@ -98,7 +99,7 @@ export default function Treasury() {
                   <TableBody>
                     {entries.map(entry => (
                       <TableRow key={entry.id}>
-                        <TableCell>{new Date(entry.entry_date).toLocaleDateString('ar-SA')}</TableCell>
+                        <TableCell className="tabular-nums">{fmtDate(entry.entry_date)}</TableCell>
                         <TableCell>{entry.description}</TableCell>
                         <TableCell>
                           <span className={`inline-flex items-center gap-1 text-sm ${entry.entry_type === 'income' || entry.entry_type === 'deposit' ? 'text-success' : 'text-destructive'}`}>
@@ -106,7 +107,7 @@ export default function Treasury() {
                             {entry.entry_type === 'income' ? 'دخول' : entry.entry_type === 'expense' ? 'خروج' : entry.entry_type === 'deposit' ? 'إيداع' : 'سحب'}
                           </span>
                         </TableCell>
-                        <TableCell className="tabular-nums font-medium">{Number(entry.amount).toFixed(2)} د.ل</TableCell>
+                        <TableCell className="tabular-nums font-medium">{fmtNum(Number(entry.amount))} د.ل</TableCell>
                       </TableRow>
                     ))}
                     {entries.length === 0 && <TableRow><TableCell colSpan={4} className="text-center py-8 text-muted-foreground">لا توجد حركات</TableCell></TableRow>}
@@ -125,7 +126,7 @@ export default function Treasury() {
                 <Button variant="outline" size="sm" onClick={() => {
                   const data = profiles.map((p: any) => {
                     const stats = getSellerStats(p.user_id);
-                    return { 'البائع': p.display_name, 'عدد العمليات': stats.count, 'المبيعات': stats.sales.toFixed(2), 'المشتريات': stats.purchases.toFixed(2), 'الصافي': stats.net.toFixed(2) };
+                    return { 'البائع': p.display_name, 'عدد العمليات': stats.count, 'المبيعات': fmtNum(stats.sales), 'المشتريات': fmtNum(stats.purchases), 'الصافي': fmtNum(stats.net) };
                   });
                   exportToCSV(data, 'خزائن_البائعين');
                 }}><FileDown className="h-4 w-4 ml-1" /> Excel</Button>
@@ -151,9 +152,9 @@ export default function Treasury() {
                         <TableRow key={p.id}>
                           <TableCell className="font-medium">{p.display_name || '—'}</TableCell>
                           <TableCell className="tabular-nums">{stats.count}</TableCell>
-                          <TableCell className="tabular-nums text-success">{stats.sales.toFixed(2)} د.ل</TableCell>
-                          <TableCell className="tabular-nums text-destructive">{stats.purchases.toFixed(2)} د.ل</TableCell>
-                          <TableCell className={cn('tabular-nums font-bold', stats.net >= 0 ? 'text-success' : 'text-destructive')}>{stats.net.toFixed(2)} د.ل</TableCell>
+                          <TableCell className="tabular-nums text-success">{fmtNum(stats.sales)} د.ل</TableCell>
+                          <TableCell className="tabular-nums text-destructive">{fmtNum(stats.purchases)} د.ل</TableCell>
+                          <TableCell className={cn('tabular-nums font-bold', stats.net >= 0 ? 'text-success' : 'text-destructive')}>{fmtNum(stats.net)} د.ل</TableCell>
                           <TableCell>
                             <div className="flex gap-1">
                               <Button variant="outline" size="sm" onClick={() => { setSelectedSeller(p.user_id); setSellerView('summary'); }}>كشف إجمالي</Button>
@@ -212,7 +213,6 @@ function SellerDetail({ userId, profiles, invoices, view, onBack, onEdit }: {
   const profile = profiles.find((p: any) => p.user_id === userId);
   const allSellerInvoices = invoices.filter((i: any) => i.created_by === userId && ['sale', 'return', 'damage', 'purchase'].includes(i.invoice_type));
   
-  // Date range filter for detail view
   const today = new Date().toISOString().slice(0, 10);
   const monthStart = today.slice(0, 8) + '01';
   const [dateFrom, setDateFrom] = useState(monthStart);
@@ -237,9 +237,9 @@ function SellerDetail({ userId, profiles, invoices, view, onBack, onEdit }: {
 
       {view === 'summary' ? (
         <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-          <Card className="border-0 shadow-card"><CardContent className="p-6 text-center"><p className="text-3xl font-bold text-primary">{sellerInvoices.length}</p><p className="text-sm text-muted-foreground mt-1">عدد العمليات</p></CardContent></Card>
-          <Card className="border-0 shadow-card"><CardContent className="p-6 text-center"><p className="text-3xl font-bold text-success">{salesTotal.toFixed(2)} د.ل</p><p className="text-sm text-muted-foreground mt-1">إجمالي المبيعات</p></CardContent></Card>
-          <Card className="border-0 shadow-card"><CardContent className="p-6 text-center"><p className="text-3xl font-bold text-destructive">{purchasesTotal.toFixed(2)} د.ل</p><p className="text-sm text-muted-foreground mt-1">إجمالي المشتريات</p></CardContent></Card>
+          <Card className="border-0 shadow-card"><CardContent className="p-6 text-center"><p className="text-3xl font-bold text-primary tabular-nums">{sellerInvoices.length}</p><p className="text-sm text-muted-foreground mt-1">عدد العمليات</p></CardContent></Card>
+          <Card className="border-0 shadow-card"><CardContent className="p-6 text-center"><p className="text-3xl font-bold text-success tabular-nums">{fmtNum(salesTotal)} د.ل</p><p className="text-sm text-muted-foreground mt-1">إجمالي المبيعات</p></CardContent></Card>
+          <Card className="border-0 shadow-card"><CardContent className="p-6 text-center"><p className="text-3xl font-bold text-destructive tabular-nums">{fmtNum(purchasesTotal)} د.ل</p><p className="text-sm text-muted-foreground mt-1">إجمالي المشتريات</p></CardContent></Card>
         </div>
       ) : (
         <div className="rounded-xl bg-card shadow-card overflow-hidden">
@@ -252,9 +252,9 @@ function SellerDetail({ userId, profiles, invoices, view, onBack, onEdit }: {
             <Button variant="outline" size="sm" onClick={() => {
               exportToCSV(sellerInvoices.map((inv: any) => ({
                 'رقم الفاتورة': inv.invoice_number || '—',
-                'التاريخ': new Date(inv.invoice_date).toLocaleDateString('ar-SA'),
+                'التاريخ': fmtDate(inv.invoice_date),
                 'النوع': typeLabels[inv.invoice_type] || inv.invoice_type,
-                'الإجمالي': Number(inv.total).toFixed(2),
+                'الإجمالي': fmtNum(Number(inv.total)),
               })), `كشف_${profile?.display_name}`);
             }}><FileDown className="h-4 w-4 ml-1" /> Excel</Button>
           </div>
@@ -270,7 +270,7 @@ function SellerDetail({ userId, profiles, invoices, view, onBack, onEdit }: {
               {sellerInvoices.map((inv: any) => (
                 <TableRow key={inv.id}>
                   <TableCell className="font-mono text-sm">{inv.invoice_number || '—'}</TableCell>
-                  <TableCell>{new Date(inv.invoice_date).toLocaleDateString('ar-SA')}</TableCell>
+                  <TableCell className="tabular-nums">{fmtDate(inv.invoice_date)}</TableCell>
                   <TableCell>
                     <span className={cn('inline-block rounded-full px-2 py-0.5 text-xs font-medium',
                       inv.invoice_type === 'sale' ? 'bg-success/10 text-success' :
@@ -279,7 +279,7 @@ function SellerDetail({ userId, profiles, invoices, view, onBack, onEdit }: {
                       {typeLabels[inv.invoice_type] || inv.invoice_type}
                     </span>
                   </TableCell>
-                  <TableCell className="tabular-nums font-medium">{Number(inv.total).toFixed(2)} د.ل</TableCell>
+                  <TableCell className="tabular-nums font-medium">{fmtNum(Number(inv.total))} د.ل</TableCell>
                   <TableCell>
                     <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => onEdit(inv.id)}><Edit className="h-3.5 w-3.5" /></Button>
                   </TableCell>

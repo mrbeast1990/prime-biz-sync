@@ -7,11 +7,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Contact, InsuranceCustomer } from '@/types';
-import { Edit, FileText, Save, ChevronDown, Wallet, Printer } from 'lucide-react';
+import { Edit, FileText, Save, ChevronDown, Wallet, Printer, XCircle, ScrollText } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { useInvoices, useInsuranceSales, useInvoiceItems, useInsuranceSaleItems, useUpdateInvoice, useUpdateInvoiceItem, useUpdateContact, useUpdateInsuranceCustomer } from '@/hooks/useSupabaseData';
 import { useSettings } from '@/hooks/useSettings';
-import { printInvoicePDF, printPaymentReceipt } from '@/utils/printUtils';
+import { printInvoicePDF, printPaymentReceipt, printAccountStatement } from '@/utils/printUtils';
 import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
 
@@ -22,6 +22,9 @@ interface AccountDetailsDialogProps {
   insuranceCustomer?: InsuranceCustomer | null;
   type: 'customer' | 'supplier' | 'insurance';
 }
+
+const fmtDate = (d: string) => new Date(d).toLocaleDateString('en-GB');
+const fmtNum = (n: number) => n.toFixed(2);
 
 // ── Editable Items Row ──
 function EditableItemsRow({ transactionId, type, isEditing, onSaved }: { transactionId: string; type: 'invoice' | 'insurance'; isEditing: boolean; onSaved?: () => void }) {
@@ -44,7 +47,6 @@ function EditableItemsRow({ transactionId, type, isEditing, onSaved }: { transac
       for (const [id, edit] of Object.entries(edits)) {
         await updateItem.mutateAsync({ id, quantity: edit.quantity, unit_price: edit.unit_price, total: edit.quantity * edit.unit_price });
       }
-      // Recalculate invoice total
       if (type === 'invoice') {
         let newTotal = 0;
         items.forEach((item: any) => {
@@ -90,9 +92,9 @@ function EditableItemsRow({ transactionId, type, isEditing, onSaved }: { transac
                     {isEditing && type === 'invoice' ? (
                       <Input type="number" min={0} step="0.01" value={price} className="h-7 w-20 text-xs"
                         onChange={e => handleEditChange(item.id, 'unit_price', Number(e.target.value))} />
-                    ) : <span className="tabular-nums">{price.toFixed(2)}</span>}
+                    ) : <span className="tabular-nums">{fmtNum(price)}</span>}
                   </TableCell>
-                  <TableCell className="py-1.5 tabular-nums">{(qty * price).toFixed(2)} د.ل</TableCell>
+                  <TableCell className="py-1.5 tabular-nums">{fmtNum(qty * price)} د.ل</TableCell>
                 </TableRow>
               );
             })}
@@ -199,11 +201,26 @@ export function AccountDetailsDialog({ isOpen, onClose, contact, insuranceCustom
         status: newPaid >= total ? 'completed' : 'pending',
         payment_method: paymentMethod,
       });
-      toast({ title: 'تم السداد', description: `تم سداد ${amount.toFixed(2)} د.ل بنجاح` });
+      toast({ title: 'تم السداد', description: `تم سداد ${fmtNum(amount)} د.ل بنجاح` });
       setShowPayment(false);
       setPaymentInvoiceId(null);
     } catch {
       toast({ title: 'خطأ', description: 'فشل تسجيل السداد', variant: 'destructive' });
+    }
+  };
+
+  const handleCancelPayment = async (t: any) => {
+    if (!window.confirm('هل أنت متأكد من إلغاء السداد لهذه الفاتورة؟ سيتم إرجاع المبلغ المسدد إلى صفر.')) return;
+    try {
+      await updateInvoice.mutateAsync({
+        id: t.id,
+        paid: 0,
+        status: 'pending',
+        payment_method: null,
+      });
+      toast({ title: 'تم الإلغاء', description: 'تم إلغاء السداد وإرجاع المبلغ' });
+    } catch {
+      toast({ title: 'خطأ', description: 'فشل إلغاء السداد', variant: 'destructive' });
     }
   };
 
@@ -215,7 +232,7 @@ export function AccountDetailsDialog({ isOpen, onClose, contact, insuranceCustom
 
     printInvoicePDF({
       invoiceNumber: t.invoice_number,
-      date: new Date(t.invoice_date || t.sale_date).toLocaleDateString('ar-SA'),
+      date: fmtDate(t.invoice_date || t.sale_date),
       contactName: getName() || '',
       items: (items || []).map((i: any) => ({ product_name: i.product_name, quantity: i.quantity, unit_price: Number(i.unit_price), total: Number(i.total) })),
       total: Number(t.total),
@@ -226,12 +243,62 @@ export function AccountDetailsDialog({ isOpen, onClose, contact, insuranceCustom
 
   const handlePrintPayment = (t: any) => {
     printPaymentReceipt({
-      date: new Date(t.invoice_date || t.sale_date).toLocaleDateString('ar-SA'),
+      date: fmtDate(t.invoice_date || t.sale_date),
       contactName: getName() || '',
       amount: Number(t.paid || 0),
       paymentMethod: t.payment_method || 'cash',
       invoiceNumber: t.invoice_number,
     }, defaultSettings);
+  };
+
+  const handlePrintStatement = () => {
+    // Build debit/credit entries sorted by date
+    const entries: { date: string; description: string; debit: number; credit: number; sortDate: string }[] = [];
+    
+    transactions.forEach((t: any) => {
+      const dateStr = t.invoice_date || t.sale_date;
+      // Purchase = debit (مدين), Sale = credit for customer
+      if (type === 'supplier') {
+        // Purchases = debit
+        entries.push({ date: fmtDate(dateStr), description: `فاتورة مشتريات ${t.invoice_number || ''}`.trim(), debit: Number(t.total), credit: 0, sortDate: dateStr });
+        // Payment = credit
+        if (Number(t.paid || 0) > 0) {
+          entries.push({ date: fmtDate(dateStr), description: `إيصال سداد ${t.invoice_number || ''}`.trim(), debit: 0, credit: Number(t.paid), sortDate: dateStr });
+        }
+      } else {
+        // Customer: Sale = debit, Payment = credit
+        entries.push({ date: fmtDate(dateStr), description: `فاتورة بيع ${t.invoice_number || ''}`.trim(), debit: Number(t.total), credit: 0, sortDate: dateStr });
+        if (Number(t.paid || 0) > 0) {
+          entries.push({ date: fmtDate(dateStr), description: `إيصال سداد ${t.invoice_number || ''}`.trim(), debit: 0, credit: Number(t.paid), sortDate: dateStr });
+        }
+      }
+    });
+
+    entries.sort((a, b) => a.sortDate.localeCompare(b.sortDate));
+
+    let runningBalance = 0;
+    const statementEntries = entries.map(e => {
+      runningBalance += e.debit - e.credit;
+      return { date: e.date, description: e.description, debit: e.debit, credit: e.credit, balance: runningBalance };
+    });
+
+    const totalDebit = entries.reduce((s, e) => s + e.debit, 0);
+    const totalCredit = entries.reduce((s, e) => s + e.credit, 0);
+
+    printAccountStatement({
+      contactName: getName() || '',
+      entries: statementEntries,
+      totalDebit,
+      totalCredit,
+      finalBalance: runningBalance,
+    }, defaultSettings);
+  };
+
+  // Determine transaction type label
+  const getTransactionLabel = (t: any) => {
+    if (type === 'insurance') return 'بيع تأمين';
+    const typeMap: Record<string, string> = { sale: 'فاتورة بيع', purchase: 'فاتورة مشتريات', return: 'مرتجع', damage: 'تالف' };
+    return typeMap[t.invoice_type] || 'فاتورة';
   };
 
   return (
@@ -253,83 +320,142 @@ export function AccountDetailsDialog({ isOpen, onClose, contact, insuranceCustom
           <TabsContent value="transactions" className="space-y-4">
             <div className={cn("grid gap-4", type === 'supplier' ? "grid-cols-3" : "grid-cols-2")}>
               <div className="rounded-lg bg-primary/10 p-4 text-center">
-                <p className="text-2xl font-bold text-primary">{transactions.length}</p>
+                <p className="text-2xl font-bold text-primary tabular-nums">{transactions.length}</p>
                 <p className="text-sm text-muted-foreground">عدد العمليات</p>
               </div>
               <div className="rounded-lg bg-success/10 p-4 text-center">
-                <p className="text-2xl font-bold text-success">{totalAmount.toFixed(2)} د.ل</p>
+                <p className="text-2xl font-bold text-success tabular-nums">{fmtNum(totalAmount)} د.ل</p>
                 <p className="text-sm text-muted-foreground">الإجمالي</p>
               </div>
               {type === 'supplier' && (
                 <div className="rounded-lg bg-destructive/10 p-4 text-center">
-                  <p className="text-2xl font-bold text-destructive">{totalRemaining.toFixed(2)} د.ل</p>
+                  <p className="text-2xl font-bold text-destructive tabular-nums">{fmtNum(totalRemaining)} د.ل</p>
                   <p className="text-sm text-muted-foreground">المتبقي</p>
                 </div>
               )}
             </div>
 
+            {/* Print Account Statement button */}
+            {type !== 'insurance' && transactions.length > 0 && (
+              <Button variant="outline" className="w-full gap-2" onClick={handlePrintStatement}>
+                <ScrollText className="h-4 w-4" /> طباعة كشف حساب (مدين / دائن)
+              </Button>
+            )}
+
             {transactions.length > 0 ? (
               <div className="space-y-2">
-                {transactions.map((t: any) => {
-                  const remaining = Number(t.total) - Number(t.paid || 0);
-                  const isPaid = remaining <= 0;
-                  const isEditingThis = editingTransactionId === t.id;
-                  return (
-                    <div key={t.id} className="rounded-lg border overflow-hidden">
-                      <div className="flex items-center justify-between p-3 hover:bg-muted/50 transition-colors">
-                        <button onClick={() => toggleExpand(t.id)} className="flex items-center gap-3 flex-1">
-                          <ChevronDown className={cn("h-4 w-4 text-muted-foreground transition-transform", expandedId === t.id && "rotate-180")} />
-                          <span className="text-sm">{new Date(t.invoice_date || t.sale_date).toLocaleDateString('ar-SA')}</span>
-                          {type === 'supplier' && (
-                            <span className={cn('inline-block rounded-full px-2 py-0.5 text-xs font-medium',
-                              isPaid ? 'bg-success/10 text-success' : 'bg-warning/10 text-warning')}>
-                              {isPaid ? 'مسددة' : `متبقي ${remaining.toFixed(2)} د.ل`}
-                            </span>
+                <Table>
+                  <TableHeader>
+                    <TableRow className="text-xs">
+                      <TableHead className="text-right">التاريخ</TableHead>
+                      <TableHead className="text-right">نوع العملية</TableHead>
+                      {type !== 'insurance' && <TableHead className="text-right">مدين</TableHead>}
+                      {type !== 'insurance' && <TableHead className="text-right">دائن</TableHead>}
+                      {type === 'insurance' && <TableHead className="text-right">المبلغ</TableHead>}
+                      <TableHead className="text-right">إجراءات</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {transactions.map((t: any) => {
+                      const remaining = Number(t.total) - Number(t.paid || 0);
+                      const isPaid = remaining <= 0;
+                      const isEditingThis = editingTransactionId === t.id;
+                      const paidAmount = Number(t.paid || 0);
+                      
+                      return (
+                        <>
+                          {/* Invoice row */}
+                          <TableRow key={t.id} className="text-xs hover:bg-muted/50">
+                            <TableCell className="py-2 tabular-nums">{fmtDate(t.invoice_date || t.sale_date)}</TableCell>
+                            <TableCell className="py-2">
+                              <span className={cn('inline-block rounded-full px-2 py-0.5 text-xs font-medium',
+                                type === 'supplier' ? 'bg-destructive/10 text-destructive' : 'bg-primary/10 text-primary')}>
+                                {getTransactionLabel(t)}
+                              </span>
+                            </TableCell>
+                            {type !== 'insurance' && (
+                              <>
+                                <TableCell className="py-2 tabular-nums text-destructive font-medium">
+                                  {fmtNum(Number(t.total))}
+                                </TableCell>
+                                <TableCell className="py-2 tabular-nums text-success font-medium">—</TableCell>
+                              </>
+                            )}
+                            {type === 'insurance' && (
+                              <TableCell className="py-2 tabular-nums font-medium">{fmtNum(Number(t.total))} د.ل</TableCell>
+                            )}
+                            <TableCell className="py-2">
+                              <div className="flex items-center gap-0.5">
+                                <Button variant="ghost" size="icon" className="h-6 w-6" title="عرض التفاصيل"
+                                  onClick={() => toggleExpand(t.id)}>
+                                  <ChevronDown className={cn("h-3 w-3 transition-transform", expandedId === t.id && "rotate-180")} />
+                                </Button>
+                                <Button variant="ghost" size="icon" className="h-6 w-6" title="طباعة فاتورة"
+                                  onClick={() => handlePrintInvoice(t)}>
+                                  <Printer className="h-3 w-3" />
+                                </Button>
+                                {type !== 'insurance' && (
+                                  <Button variant="ghost" size="icon" className="h-6 w-6" title="تعديل"
+                                    onClick={() => setEditingTransactionId(isEditingThis ? null : t.id)}>
+                                    <Edit className={cn("h-3 w-3", isEditingThis && "text-primary")} />
+                                  </Button>
+                                )}
+                                {type === 'supplier' && !isPaid && (
+                                  <Button variant="outline" size="sm" className="h-6 text-[10px] gap-1 px-2"
+                                    onClick={() => openPayment(t.id)}>
+                                    <Wallet className="h-3 w-3" /> سداد
+                                  </Button>
+                                )}
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                          
+                          {/* Payment row (if has paid) */}
+                          {type !== 'insurance' && paidAmount > 0 && (
+                            <TableRow key={`${t.id}-payment`} className="text-xs bg-success/5 hover:bg-success/10">
+                              <TableCell className="py-2 tabular-nums">{fmtDate(t.invoice_date || t.sale_date)}</TableCell>
+                              <TableCell className="py-2">
+                                <span className="inline-block rounded-full px-2 py-0.5 text-xs font-medium bg-success/10 text-success">
+                                  إيصال سداد
+                                </span>
+                              </TableCell>
+                              <TableCell className="py-2 tabular-nums">—</TableCell>
+                              <TableCell className="py-2 tabular-nums text-success font-medium">{fmtNum(paidAmount)}</TableCell>
+                              <TableCell className="py-2">
+                                <div className="flex items-center gap-0.5">
+                                  <Button variant="ghost" size="icon" className="h-6 w-6" title="طباعة إيصال"
+                                    onClick={() => handlePrintPayment(t)}>
+                                    <Printer className="h-3 w-3" />
+                                  </Button>
+                                  <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive" title="إلغاء السداد"
+                                    onClick={() => handleCancelPayment(t)}>
+                                    <XCircle className="h-3 w-3" />
+                                  </Button>
+                                </div>
+                              </TableCell>
+                            </TableRow>
                           )}
-                        </button>
-                        <div className="flex items-center gap-1">
-                          <span className="tabular-nums font-medium text-sm ml-2">{Number(t.total).toFixed(2)} د.ل</span>
-                          {/* Print Invoice */}
-                          <Button variant="ghost" size="icon" className="h-7 w-7" title="طباعة فاتورة"
-                            onClick={() => handlePrintInvoice(t)}>
-                            <Printer className="h-3.5 w-3.5" />
-                          </Button>
-                          {/* Print Payment Receipt (if has paid amount) */}
-                          {Number(t.paid || 0) > 0 && (
-                            <Button variant="ghost" size="icon" className="h-7 w-7" title="طباعة إيصال سداد"
-                              onClick={() => handlePrintPayment(t)}>
-                              <FileText className="h-3.5 w-3.5" />
-                            </Button>
+
+                          {/* Expanded items */}
+                          {expandedId === t.id && (
+                            <TableRow key={`${t.id}-expand`}>
+                              <TableCell colSpan={type !== 'insurance' ? 5 : 4} className="p-0">
+                                <div className="px-3 py-2">
+                                  <EditableItemsRow
+                                    transactionId={t.id}
+                                    type={type === 'insurance' ? 'insurance' : 'invoice'}
+                                    isEditing={isEditingThis}
+                                    onSaved={() => setEditingTransactionId(null)}
+                                  />
+                                </div>
+                              </TableCell>
+                            </TableRow>
                           )}
-                          {/* Edit toggle */}
-                          {type !== 'insurance' && (
-                            <Button variant="ghost" size="icon" className="h-7 w-7" title="تعديل"
-                              onClick={() => setEditingTransactionId(isEditingThis ? null : t.id)}>
-                              <Edit className={cn("h-3.5 w-3.5", isEditingThis && "text-primary")} />
-                            </Button>
-                          )}
-                          {/* Payment button for suppliers */}
-                          {type === 'supplier' && !isPaid && (
-                            <Button variant="outline" size="sm" className="h-7 text-xs gap-1"
-                              onClick={() => openPayment(t.id)}>
-                              <Wallet className="h-3 w-3" /> سداد
-                            </Button>
-                          )}
-                        </div>
-                      </div>
-                      {expandedId === t.id && (
-                        <div className="px-3 pb-3">
-                          <EditableItemsRow
-                            transactionId={t.id}
-                            type={type === 'insurance' ? 'insurance' : 'invoice'}
-                            isEditing={isEditingThis}
-                            onSaved={() => setEditingTransactionId(null)}
-                          />
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
+                        </>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
               </div>
             ) : (
               <p className="text-center text-muted-foreground py-8">لا توجد حركات مسجلة</p>
