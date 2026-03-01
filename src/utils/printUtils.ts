@@ -69,7 +69,7 @@ function getTemplateColors(template?: string) {
 
 function buildPage(settings: PharmacySettings, title: string, body: string) {
   const colors = getTemplateColors(settings.invoiceTemplate);
-  const logoHtml = settings.logo ? `<img src="${settings.logo}" alt="logo" style="height:60px;margin:0 auto 8px;display:block" />` : '';
+  const logoHtml = settings.logo ? `<img src="${settings.logo}" alt="logo" style="height:120px;max-width:300px;object-fit:contain;margin:0 auto 12px;display:block" />` : '';
   return `<!DOCTYPE html>
 <html dir="rtl" lang="ar">
 <head>
