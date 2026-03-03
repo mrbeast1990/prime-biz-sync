@@ -23,6 +23,7 @@ interface PaymentPrintData {
   amount: number;
   paymentMethod: string;
   invoiceNumber?: string;
+  remainingBalance?: number;
 }
 
 interface AccountStatementEntry {
@@ -144,6 +145,7 @@ export function printPaymentReceipt(data: PaymentPrintData, settings: PharmacySe
       <div style="font-size:16px;color:#6b7280;margin-bottom:8px">المبلغ المسدد</div>
       <div style="font-size:36px;font-weight:700;color:#2563eb">${data.amount.toFixed(2)} د.ل</div>
       <div style="font-size:14px;color:#6b7280;margin-top:8px">طريقة الدفع: ${paymentMethodLabel(data.paymentMethod)}</div>
+      ${data.remainingBalance !== undefined ? `<div style="font-size:16px;font-weight:700;margin-top:16px;padding-top:12px;border-top:1px solid #e5e7eb;color:${data.remainingBalance > 0 ? '#dc2626' : '#059669'}">الرصيد المتبقي: ${data.remainingBalance.toFixed(2)} د.ل</div>` : ''}
     </div>`;
 
   openPrintWindow(buildPage(settings, 'إيصال سداد', body));

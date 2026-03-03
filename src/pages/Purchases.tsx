@@ -106,15 +106,11 @@ export default function Purchases() {
 
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      // Generate system purchase number
-      const today = new Date().toISOString().slice(0, 10);
-      const dateStr = today.replace(/-/g, '');
+      // Generate system sequential number
       const { count } = await supabase
         .from('invoices')
-        .select('*', { count: 'exact', head: true })
-        .eq('invoice_type', 'purchase')
-        .eq('invoice_date', today);
-      const sysNumber = `PUR-${dateStr}-${String((count || 0) + 1).padStart(3, '0')}`;
+        .select('*', { count: 'exact', head: true });
+      const sysNumber = `T-${String((count || 0) + 1).padStart(4, '0')}`;
 
       const inv = await createInvoice.mutateAsync({
         invoice_type: 'purchase',
@@ -190,7 +186,7 @@ export default function Purchases() {
     exportToCSV(purchaseInvoices.map(inv => ({
       'رقم الفاتورة': inv.invoice_number || '—',
       'المورد': inv.contact_name || '—',
-      'التاريخ': new Date(inv.invoice_date).toLocaleDateString('ar-SA'),
+      'التاريخ': new Date(inv.invoice_date).toLocaleDateString('en-GB'),
       'الإجمالي': Number(inv.total).toFixed(2),
       'الحالة': inv.status === 'completed' ? 'مكتملة' : 'معلقة',
     })), 'سجل_المشتريات');
@@ -344,7 +340,7 @@ export default function Purchases() {
                     <TableRow key={inv.id}>
                       <TableCell className="font-mono text-sm">{inv.invoice_number || '—'}</TableCell>
                       <TableCell>{inv.contact_name || '—'}</TableCell>
-                      <TableCell>{new Date(inv.invoice_date).toLocaleDateString('ar-SA')}</TableCell>
+                      <TableCell>{new Date(inv.invoice_date).toLocaleDateString('en-GB')}</TableCell>
                       <TableCell className="tabular-nums font-medium">{Number(inv.total).toFixed(2)} د.ل</TableCell>
                       <TableCell>
                         <span className={cn('inline-block rounded-full px-3 py-1 text-xs font-medium', inv.status === 'completed' ? 'bg-success/10 text-success' : 'bg-warning/10 text-warning')}>

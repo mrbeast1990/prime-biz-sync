@@ -53,7 +53,7 @@ export default function Sales() {
   const handleExportCSV = () => {
     exportToCSV(filtered.map(inv => ({
       'رقم الفاتورة': inv.invoice_number || '—',
-      'التاريخ': new Date(inv.invoice_date).toLocaleDateString('ar-SA'),
+      'التاريخ': new Date(inv.invoice_date).toLocaleDateString('en-GB'),
       'نوع العملية': typeLabels[inv.invoice_type] || inv.invoice_type,
       'طريقة الدفع': paymentLabels[inv.payment_method || ''] || inv.payment_method,
       'الإجمالي': Number(inv.total).toFixed(2),
@@ -108,7 +108,7 @@ export default function Sales() {
               {filtered.map(inv => (
                 <TableRow key={inv.id}>
                   <TableCell className="font-mono text-sm">{inv.invoice_number || '—'}</TableCell>
-                  <TableCell>{new Date(inv.invoice_date).toLocaleDateString('ar-SA')}</TableCell>
+                  <TableCell>{new Date(inv.invoice_date).toLocaleDateString('en-GB')}</TableCell>
                   <TableCell>
                     <span className={cn('inline-block rounded-full px-2 py-0.5 text-xs font-medium',
                       inv.invoice_type === 'sale' ? 'bg-success/10 text-success' :
