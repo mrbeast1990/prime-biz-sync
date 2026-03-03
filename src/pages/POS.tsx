@@ -32,18 +32,12 @@ const saleModes: { mode: SaleMode; label: string; icon: React.ElementType; varia
   { mode: 'damage', label: 'إتلاف', icon: AlertTriangle, variant: 'destructive' },
 ];
 
-async function generateInvoiceNumber(type: 'sale' | 'purchase' = 'sale') {
-  const prefix = type === 'purchase' ? 'PUR' : 'INV';
-  const today = new Date().toISOString().slice(0, 10);
-  const dateStr = today.replace(/-/g, '');
-  const types = type === 'purchase' ? ['purchase'] : ['sale', 'return', 'damage'];
+async function generateInvoiceNumber() {
   const { count } = await supabase
     .from('invoices')
-    .select('*', { count: 'exact', head: true })
-    .in('invoice_type', types)
-    .eq('invoice_date', today);
-  const seq = String((count || 0) + 1).padStart(3, '0');
-  return `${prefix}-${dateStr}-${seq}`;
+    .select('*', { count: 'exact', head: true });
+  const seq = String((count || 0) + 1).padStart(4, '0');
+  return `T-${seq}`;
 }
 
 async function deductFromBatches(productId: string, quantity: number) {
@@ -176,7 +170,7 @@ export default function POS() {
       const { data: { user } } = await supabase.auth.getUser();
       const invoiceType = saleMode === 'return' ? 'return' : saleMode === 'damage' ? 'damage' : 'sale';
       const stockDelta = saleMode === 'return' ? 1 : -1;
-      const invoiceNumber = await generateInvoiceNumber('sale');
+      const invoiceNumber = await generateInvoiceNumber();
 
       await createInvoice.mutateAsync({
         invoice_type: invoiceType,
@@ -420,7 +414,7 @@ function IssuedInvoicesTab() {
   const handleExportCSV = () => {
     exportToCSV(filtered.map(inv => ({
       'رقم الفاتورة': inv.invoice_number || '—',
-      'التاريخ': new Date(inv.invoice_date).toLocaleDateString('ar-SA'),
+      'التاريخ': new Date(inv.invoice_date).toLocaleDateString('en-GB'),
       'نوع العملية': typeLabels[inv.invoice_type] || inv.invoice_type,
       'طريقة الدفع': paymentLabels[inv.payment_method || ''] || inv.payment_method,
       'الإجمالي': Number(inv.total).toFixed(2),
@@ -470,7 +464,7 @@ function IssuedInvoicesTab() {
             {filtered.map(inv => (
               <TableRow key={inv.id}>
                 <TableCell className="font-mono text-sm">{inv.invoice_number || '—'}</TableCell>
-                <TableCell>{new Date(inv.invoice_date).toLocaleDateString('ar-SA')}</TableCell>
+                <TableCell>{new Date(inv.invoice_date).toLocaleDateString('en-GB')}</TableCell>
                 <TableCell>
                   <span className={cn('inline-block rounded-full px-2 py-0.5 text-xs font-medium',
                     inv.invoice_type === 'sale' ? 'bg-success/10 text-success' :

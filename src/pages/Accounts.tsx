@@ -6,12 +6,14 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Search, Users, Truck, Shield, Loader2 } from 'lucide-react';
 import { Contact, InsuranceCustomer } from '@/types';
 import { AccountDetailsDialog } from '@/components/accounts/AccountDetailsDialog';
-import { useContacts, useInsuranceCustomers, useInsuranceSales } from '@/hooks/useSupabaseData';
+import { useContacts, useInsuranceCustomers, useInsuranceSales, useInvoices } from '@/hooks/useSupabaseData';
+import { cn } from '@/lib/utils';
 
 export default function Accounts() {
   const { data: allContacts = [], isLoading: loadingContacts } = useContacts();
   const { data: insuranceCustomers = [], isLoading: loadingInsurance } = useInsuranceCustomers();
   const { data: insuranceSales = [] } = useInsuranceSales();
+  const { data: allInvoices = [] } = useInvoices();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
@@ -36,6 +38,19 @@ export default function Accounts() {
 
   const getInsuranceSalesTotal = (customerId: string) =>
     insuranceSales.filter(s => s.customer_id === customerId).reduce((sum, s) => sum + Number(s.total), 0);
+
+  const getContactBalance = (contactId: string) => {
+    const contactInvoices = allInvoices.filter(i => i.contact_id === contactId);
+    const totalAmount = contactInvoices.reduce((sum, i) => sum + Number(i.total), 0);
+    const totalPaid = contactInvoices.reduce((sum, i) => sum + Number(i.paid || 0), 0);
+    return totalAmount - totalPaid;
+  };
+
+  const renderBalance = (balance: number) => (
+    <span className={cn('tabular-nums font-medium', balance > 0 ? 'text-destructive' : balance < 0 ? 'text-success' : '')}>
+      {balance.toFixed(2)} د.ل
+    </span>
+  );
 
   if (loadingContacts || loadingInsurance) {
     return <MainLayout title="الحسابات"><div className="flex items-center justify-center h-64"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div></MainLayout>;
@@ -68,7 +83,7 @@ export default function Accounts() {
                       <TableCell className="font-medium">{c.name}</TableCell>
                       <TableCell dir="ltr" className="text-right">{c.phone}</TableCell>
                       <TableCell>{c.address}</TableCell>
-                      <TableCell className="tabular-nums font-medium">{Number(c.balance).toFixed(2)} د.ل</TableCell>
+                      <TableCell>{renderBalance(getContactBalance(c.id))}</TableCell>
                     </TableRow>
                   ))}
                   {filterContacts(customers).length === 0 && <TableRow><TableCell colSpan={4} className="text-center py-8 text-muted-foreground">لا يوجد زبائن</TableCell></TableRow>}
@@ -89,7 +104,7 @@ export default function Accounts() {
                       <TableCell className="font-medium">{c.name}</TableCell>
                       <TableCell dir="ltr" className="text-right">{c.phone}</TableCell>
                       <TableCell>{c.address}</TableCell>
-                      <TableCell className="tabular-nums font-medium">{Number(c.balance).toFixed(2)} د.ل</TableCell>
+                      <TableCell>{renderBalance(getContactBalance(c.id))}</TableCell>
                     </TableRow>
                   ))}
                   {filterContacts(suppliers).length === 0 && <TableRow><TableCell colSpan={4} className="text-center py-8 text-muted-foreground">لا يوجد موردين</TableCell></TableRow>}

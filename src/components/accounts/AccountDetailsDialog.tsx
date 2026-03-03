@@ -248,6 +248,7 @@ export function AccountDetailsDialog({ isOpen, onClose, contact, insuranceCustom
       amount: Number(t.paid || 0),
       paymentMethod: t.payment_method || 'cash',
       invoiceNumber: t.invoice_number,
+      remainingBalance: totalRemaining,
     }, defaultSettings);
   };
 

@@ -62,7 +62,7 @@ export function AlertCard({ title, type, products }: AlertCardProps) {
                   </span>
                 ) : (
                   <span className="inline-flex items-center rounded-full bg-warning/10 px-2.5 py-1 text-xs font-medium text-warning">
-                    {new Date(product.expiry_date).toLocaleDateString('ar-SA')}
+                    {new Date(product.expiry_date).toLocaleDateString('en-GB')}
                   </span>
                 )}
               </div>

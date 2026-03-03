@@ -190,7 +190,7 @@ export default function Users() {
                         {roleLabels[user.role || 'user']}
                       </Badge>
                     </TableCell>
-                    <TableCell>{new Date(user.created_at).toLocaleDateString('ar-EG')}</TableCell>
+                    <TableCell>{new Date(user.created_at).toLocaleDateString('en-GB')}</TableCell>
                     <TableCell>
                       <Select
                         value={user.role || 'user'}
