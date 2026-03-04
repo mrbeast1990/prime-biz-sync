@@ -94,23 +94,28 @@ export default function Treasury() {
               <CardContent>
                 <Table>
                   <TableHeader><TableRow>
-                    <TableHead className="text-right">التاريخ</TableHead><TableHead className="text-right">الوصف</TableHead><TableHead className="text-right">النوع</TableHead><TableHead className="text-right">المبلغ</TableHead>
+                    <TableHead className="text-right">التاريخ</TableHead><TableHead className="text-right">رقم العملية</TableHead><TableHead className="text-right">الوصف</TableHead><TableHead className="text-right">النوع</TableHead><TableHead className="text-right">المبلغ</TableHead>
                   </TableRow></TableHeader>
                   <TableBody>
-                    {entries.map(entry => (
-                      <TableRow key={entry.id}>
-                        <TableCell className="tabular-nums">{fmtDate(entry.entry_date)}</TableCell>
-                        <TableCell>{entry.description}</TableCell>
-                        <TableCell>
-                          <span className={`inline-flex items-center gap-1 text-sm ${entry.entry_type === 'income' || entry.entry_type === 'deposit' ? 'text-success' : 'text-destructive'}`}>
-                            {entry.entry_type === 'income' || entry.entry_type === 'deposit' ? <ArrowUpCircle className="h-4 w-4" /> : <ArrowDownCircle className="h-4 w-4" />}
-                            {entry.entry_type === 'income' ? 'دخول' : entry.entry_type === 'expense' ? 'خروج' : entry.entry_type === 'deposit' ? 'إيداع' : 'سحب'}
-                          </span>
-                        </TableCell>
-                        <TableCell className="tabular-nums font-medium">{fmtNum(Number(entry.amount))} د.ل</TableCell>
-                      </TableRow>
-                    ))}
-                    {entries.length === 0 && <TableRow><TableCell colSpan={4} className="text-center py-8 text-muted-foreground">لا توجد حركات</TableCell></TableRow>}
+                    {entries.map(entry => {
+                      // Lookup invoice_number from reference_id
+                      const invoiceNumber = entry.reference_id ? allInvoices.find((inv: any) => inv.id === entry.reference_id)?.invoice_number : null;
+                      return (
+                        <TableRow key={entry.id}>
+                          <TableCell className="tabular-nums">{fmtDate(entry.entry_date)}</TableCell>
+                          <TableCell className="font-mono text-sm">{invoiceNumber || '—'}</TableCell>
+                          <TableCell>{entry.description}</TableCell>
+                          <TableCell>
+                            <span className={`inline-flex items-center gap-1 text-sm ${entry.entry_type === 'income' || entry.entry_type === 'deposit' ? 'text-success' : 'text-destructive'}`}>
+                              {entry.entry_type === 'income' || entry.entry_type === 'deposit' ? <ArrowUpCircle className="h-4 w-4" /> : <ArrowDownCircle className="h-4 w-4" />}
+                              {entry.entry_type === 'income' ? 'دخول' : entry.entry_type === 'expense' ? 'خروج' : entry.entry_type === 'deposit' ? 'إيداع' : 'سحب'}
+                            </span>
+                          </TableCell>
+                          <TableCell className="tabular-nums font-medium">{fmtNum(Number(entry.amount))} د.ل</TableCell>
+                        </TableRow>
+                      );
+                    })}
+                    {entries.length === 0 && <TableRow><TableCell colSpan={5} className="text-center py-8 text-muted-foreground">لا توجد حركات</TableCell></TableRow>}
                   </TableBody>
                 </Table>
               </CardContent>

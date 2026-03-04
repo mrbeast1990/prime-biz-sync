@@ -1,4 +1,5 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { ProductTable } from '@/components/products/ProductTable';
 import { ProductModal } from '@/components/products/ProductModal';
@@ -26,16 +27,29 @@ export default function Products() {
   const [importProducts, setImportProducts] = useState<Partial<Product>[]>([]);
   const [isImportOpen, setIsImportOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
 
   const defaultSettings = settings || { name: 'صيدلية النور', phone: '', address: '', receiptSize: '80mm' as const };
 
-  const filteredProducts = products.filter(
-    (product) =>
+  // Auto-open modal when coming from purchases with newProduct param
+  useEffect(() => {
+    if (searchParams.get('newProduct') === 'true') {
+      setSelectedProduct(null);
+      setIsModalOpen(true);
+    }
+  }, [searchParams]);
+
+  const filteredProducts = products.filter((product) => {
+    const matchesSearch =
       product.trade_name.includes(searchQuery) ||
       (product.scientific_name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
       (product.barcode || '').includes(searchQuery) ||
-      (product.category || '').includes(searchQuery)
-  );
+      (product.category || '').includes(searchQuery);
+    // Hide zero-stock products unless searching
+    if (!searchQuery && product.stock_quantity === 0) return false;
+    return matchesSearch;
+  });
 
   const handleEdit = (product: Product) => {
     setSelectedProduct(product);
@@ -64,6 +78,10 @@ export default function Products() {
       }
       setIsModalOpen(false);
       setSelectedProduct(null);
+      // If we came from purchases, navigate back
+      if (searchParams.get('returnTo') === 'purchases') {
+        navigate('/purchases?restore=true');
+      }
     } catch {
       toast({ title: 'خطأ', description: 'فشل حفظ الصنف', variant: 'destructive' });
     }

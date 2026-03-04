@@ -24,10 +24,19 @@ export default function Accounts() {
   const suppliers = allContacts.filter(c => c.contact_type === 'supplier');
 
   const filterContacts = (contacts: Contact[]) =>
-    contacts.filter(c => c.name.includes(searchQuery) || (c.phone || '').includes(searchQuery));
+    contacts.filter(c => {
+      const matchesSearch = c.name.includes(searchQuery) || (c.phone || '').includes(searchQuery);
+      // Hide zero-balance contacts unless searching
+      if (!searchQuery && getContactBalance(c.id) === 0) return false;
+      return matchesSearch;
+    });
 
   const filterInsurance = () =>
-    insuranceCustomers.filter(c => c.name.includes(searchQuery) || (c.card_number || '').includes(searchQuery) || (c.phone || '').includes(searchQuery));
+    insuranceCustomers.filter(c => {
+      const matchesSearch = c.name.includes(searchQuery) || (c.card_number || '').includes(searchQuery) || (c.phone || '').includes(searchQuery);
+      if (!searchQuery && getInsuranceSalesTotal(c.id) === 0) return false;
+      return matchesSearch;
+    });
 
   const openContact = (contact: Contact, type: 'customer' | 'supplier') => {
     setSelectedContact(contact); setSelectedInsurance(null); setDialogType(type);

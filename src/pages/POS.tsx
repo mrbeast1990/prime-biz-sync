@@ -88,13 +88,28 @@ export default function POS() {
   const createInvoice = useCreateInvoice();
   const updateStock = useUpdateProductStock();
 
-  const [cart, setCart] = useState<CartItem[]>([]);
+  const [cart, setCart] = useState<CartItem[]>(() => {
+    try {
+      const draft = sessionStorage.getItem('pos_draft');
+      if (draft) { sessionStorage.removeItem('pos_draft'); return JSON.parse(draft); }
+    } catch { /* ignore */ }
+    return [];
+  });
   const [searchQuery, setSearchQuery] = useState('');
   const [barcodeInput, setBarcodeInput] = useState('');
   const [saleMode, setSaleMode] = useState<SaleMode>('cash');
   const [customerName, setCustomerName] = useState('');
   const [shortcuts, setShortcuts] = useState<string[]>(getShortcuts);
   const barcodeRef = useRef<HTMLInputElement>(null);
+
+  // Save draft to sessionStorage on unmount if cart has items
+  useEffect(() => {
+    return () => {
+      if (cart.length > 0) {
+        sessionStorage.setItem('pos_draft', JSON.stringify(cart));
+      }
+    };
+  }, [cart]);
 
   // Only show products when searching
   const showProducts = searchQuery.length > 0;

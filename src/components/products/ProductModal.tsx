@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, KeyboardEvent } from 'react';
 import { Product } from '@/types';
-import { Shuffle, Plus, X, Star } from 'lucide-react';
+import { Shuffle, Plus, X, Star, Loader2 } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -120,9 +121,29 @@ export function ProductModal({ isOpen, onClose, onSave, product }: ProductModalP
     localStorage.setItem(SHORTCUTS_KEY, JSON.stringify(updated));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const [checking, setChecking] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    onSave(formData);
+    setChecking(true);
+    try {
+      // Check for duplicate trade_name
+      const { data: existing } = await supabase
+        .from('products')
+        .select('id')
+        .eq('trade_name', formData.trade_name)
+        .limit(1);
+      if (existing && existing.length > 0 && (!product || existing[0].id !== product.id)) {
+        toast({ title: 'خطأ', description: 'يوجد صنف بنفس الاسم بالفعل', variant: 'destructive' });
+        setChecking(false);
+        return;
+      }
+      onSave(formData);
+    } catch {
+      toast({ title: 'خطأ', description: 'فشل التحقق من الاسم', variant: 'destructive' });
+    } finally {
+      setChecking(false);
+    }
   };
 
   return (
@@ -283,7 +304,7 @@ export function ProductModal({ isOpen, onClose, onSave, product }: ProductModalP
 
           <div className="flex justify-end gap-3 pt-4 border-t">
             <Button type="button" variant="outline" onClick={onClose}>إلغاء</Button>
-            <Button type="submit">{product ? 'حفظ التغييرات' : 'إضافة الصنف'}</Button>
+            <Button type="submit" disabled={checking}>{checking ? <Loader2 className="h-4 w-4 animate-spin" /> : product ? 'حفظ التغييرات' : 'إضافة الصنف'}</Button>
           </div>
         </form>
       </DialogContent>
