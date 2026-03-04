@@ -29,13 +29,16 @@ export default function Products() {
 
   const defaultSettings = settings || { name: 'صيدلية النور', phone: '', address: '', receiptSize: '80mm' as const };
 
-  const filteredProducts = products.filter(
-    (product) =>
+  const filteredProducts = products.filter((product) => {
+    const matchesSearch =
       product.trade_name.includes(searchQuery) ||
       (product.scientific_name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
       (product.barcode || '').includes(searchQuery) ||
-      (product.category || '').includes(searchQuery)
-  );
+      (product.category || '').includes(searchQuery);
+    // Hide zero-stock products unless searching
+    if (!searchQuery && product.stock_quantity === 0) return false;
+    return matchesSearch;
+  });
 
   const handleEdit = (product: Product) => {
     setSelectedProduct(product);

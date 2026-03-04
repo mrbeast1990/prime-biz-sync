@@ -76,11 +76,28 @@ export default function Purchases() {
     }
   };
 
+  const [showNotFoundDialog, setShowNotFoundDialog] = useState(false);
+  const [notFoundBarcode, setNotFoundBarcode] = useState('');
+
   const handleBarcodeSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const product = products.find((p) => p.barcode === barcodeInput);
     if (product) { addProduct(product); setBarcodeInput(''); }
-    else { toast({ title: 'غير موجود', description: 'لم يتم العثور على صنف بهذا الباركود', variant: 'destructive' }); }
+    else {
+      setNotFoundBarcode(barcodeInput);
+      setShowNotFoundDialog(true);
+    }
+  };
+
+  const handleGoToAddProduct = () => {
+    // Save current invoice state to sessionStorage
+    sessionStorage.setItem('purchase_draft', JSON.stringify({
+      supplier: selectedSupplier,
+      items,
+      invoiceNumber,
+    }));
+    setShowNotFoundDialog(false);
+    navigate(`/products?newProduct=true&returnTo=purchases&barcode=${encodeURIComponent(notFoundBarcode)}`);
   };
 
   const updateItem = (itemId: string, field: 'quantity' | 'unit_price' | 'sale_price', value: number) => {

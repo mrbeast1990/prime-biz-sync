@@ -304,7 +304,7 @@ export function ProductModal({ isOpen, onClose, onSave, product }: ProductModalP
 
           <div className="flex justify-end gap-3 pt-4 border-t">
             <Button type="button" variant="outline" onClick={onClose}>إلغاء</Button>
-            <Button type="submit">{product ? 'حفظ التغييرات' : 'إضافة الصنف'}</Button>
+            <Button type="submit" disabled={checking}>{checking ? <Loader2 className="h-4 w-4 animate-spin" /> : product ? 'حفظ التغييرات' : 'إضافة الصنف'}</Button>
           </div>
         </form>
       </DialogContent>
