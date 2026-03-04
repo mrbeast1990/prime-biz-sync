@@ -27,8 +27,18 @@ export default function Products() {
   const [importProducts, setImportProducts] = useState<Partial<Product>[]>([]);
   const [isImportOpen, setIsImportOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
 
   const defaultSettings = settings || { name: 'صيدلية النور', phone: '', address: '', receiptSize: '80mm' as const };
+
+  // Auto-open modal when coming from purchases with newProduct param
+  useEffect(() => {
+    if (searchParams.get('newProduct') === 'true') {
+      setSelectedProduct(null);
+      setIsModalOpen(true);
+    }
+  }, [searchParams]);
 
   const filteredProducts = products.filter((product) => {
     const matchesSearch =
