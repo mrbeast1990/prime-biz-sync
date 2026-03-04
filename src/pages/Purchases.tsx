@@ -48,6 +48,19 @@ export default function Purchases() {
   const [viewInvoiceId, setViewInvoiceId] = useState<string | null>(null);
   const [editInvoiceId, setEditInvoiceId] = useState<string | null>(null);
 
+  // Restore draft from sessionStorage when returning from product creation
+  useEffect(() => {
+    if (searchParams.get('restore') === 'true') {
+      try {
+        const draft = JSON.parse(sessionStorage.getItem('purchase_draft') || '{}');
+        if (draft.supplier) setSelectedSupplier(draft.supplier);
+        if (draft.items) setItems(draft.items);
+        if (draft.invoiceNumber) setInvoiceNumber(draft.invoiceNumber);
+        sessionStorage.removeItem('purchase_draft');
+      } catch { /* ignore */ }
+    }
+  }, []);
+
   const filteredProducts = products.filter(
     (p) =>
       p.trade_name.includes(searchQuery) ||
