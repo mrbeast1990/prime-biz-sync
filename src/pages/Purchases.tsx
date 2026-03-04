@@ -387,12 +387,20 @@ export default function Purchases() {
       </Tabs>
 
       <SupplierModal isOpen={showSupplierModal} onClose={() => setShowSupplierModal(false)} onSave={handleSupplierSave} />
-      
-      {/* View Invoice Dialog */}
       <InvoiceViewDialog invoiceId={viewInvoiceId} onClose={() => setViewInvoiceId(null)} />
-      
-      {/* Edit Invoice Dialog */}
       <InvoiceEditDialog invoiceId={editInvoiceId} onClose={() => setEditInvoiceId(null)} />
+
+      {/* Not Found Barcode Dialog */}
+      <Dialog open={showNotFoundDialog} onOpenChange={setShowNotFoundDialog}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader><DialogTitle>صنف غير موجود</DialogTitle></DialogHeader>
+          <p className="text-sm text-muted-foreground">الكود <span className="font-mono font-bold">{notFoundBarcode}</span> غير موجود في قاعدة البيانات. هل تريد إضافة صنف جديد؟</p>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setShowNotFoundDialog(false); setBarcodeInput(''); }}>إلغاء</Button>
+            <Button onClick={handleGoToAddProduct}>نعم، أضف صنف جديد</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </MainLayout>
   );
 }
