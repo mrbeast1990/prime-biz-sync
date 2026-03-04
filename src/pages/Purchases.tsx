@@ -26,6 +26,7 @@ interface PurchaseItem extends InvoiceItem {
 }
 
 export default function Purchases() {
+  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { data: products = [], isLoading: loadingProducts } = useProducts();
