@@ -61,6 +61,19 @@ export default function Purchases() {
     }
   }, []);
 
+  // Save draft on unmount if items exist
+  useEffect(() => {
+    return () => {
+      if (items.length > 0) {
+        sessionStorage.setItem('purchase_draft', JSON.stringify({
+          supplier: selectedSupplier,
+          items,
+          invoiceNumber,
+        }));
+      }
+    };
+  }, [items, selectedSupplier, invoiceNumber]);
+
   const filteredProducts = products.filter(
     (p) =>
       p.trade_name.includes(searchQuery) ||
