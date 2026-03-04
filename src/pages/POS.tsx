@@ -110,7 +110,6 @@ export default function POS() {
       }
     };
   }, [cart]);
-  const barcodeRef = useRef<HTMLInputElement>(null);
 
   // Only show products when searching
   const showProducts = searchQuery.length > 0;
