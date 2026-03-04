@@ -78,6 +78,10 @@ export default function Products() {
       }
       setIsModalOpen(false);
       setSelectedProduct(null);
+      // If we came from purchases, navigate back
+      if (searchParams.get('returnTo') === 'purchases') {
+        navigate('/purchases?restore=true');
+      }
     } catch {
       toast({ title: 'خطأ', description: 'فشل حفظ الصنف', variant: 'destructive' });
     }
