@@ -207,48 +207,8 @@ export default function Purchases() {
 
         <TabsContent value="new">
           <div className="grid h-[calc(100vh-12rem)] grid-cols-1 gap-6 lg:grid-cols-3">
-            <div className="lg:col-span-2 flex flex-col space-y-4">
-              <div className="rounded-xl bg-card p-4 shadow-card">
-                <div className="flex items-center gap-3 mb-3"><Truck className="h-5 w-5 text-primary" /><Label className="text-base font-semibold">المورد</Label></div>
-                <div className="flex items-center gap-3">
-                  <Select value={selectedSupplier?.id || ''} onValueChange={(v) => setSelectedSupplier(allContacts.find((s) => s.id === v) || null)}>
-                    <SelectTrigger className="flex-1"><SelectValue placeholder="اختر المورد..." /></SelectTrigger>
-                    <SelectContent>{allContacts.map((s) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
-                  </Select>
-                  <Button variant="outline" size="icon" onClick={() => setShowSupplierModal(true)}><UserPlus className="h-4 w-4" /></Button>
-                </div>
-                <div className="mt-3">
-                  <Label className="text-sm font-medium">رقم فاتورة المورد <span className="text-destructive">*</span></Label>
-                  <Input value={invoiceNumber} onChange={e => setInvoiceNumber(e.target.value)} placeholder="أدخل رقم الفاتورة..." className="mt-1" />
-                </div>
-              </div>
-
-              <div className="rounded-xl bg-card p-4 shadow-card flex-1 flex flex-col">
-                <div className="flex items-center gap-3 mb-3"><PackagePlus className="h-5 w-5 text-primary" /><Label className="text-base font-semibold">إضافة أصناف</Label></div>
-                <form onSubmit={handleBarcodeSubmit} className="mb-3">
-                  <div className="relative"><Barcode className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" /><Input value={barcodeInput} onChange={(e) => setBarcodeInput(e.target.value)} placeholder="امسح الباركود..." className="pr-9" /></div>
-                </form>
-                <div className="relative mb-3"><Search className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" /><Input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="بحث بالاسم..." className="pr-9" /></div>
-                <div className="flex-1 overflow-y-auto custom-scrollbar">
-                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-                    {filteredProducts.map((product) => (
-                      <button key={product.id} onClick={() => addProduct(product)} className="rounded-lg bg-muted/50 p-3 text-right transition-all hover:bg-muted active:scale-[0.98]">
-                        <p className="text-sm font-medium text-card-foreground leading-tight">{product.trade_name}</p>
-                        <p className="text-xs text-muted-foreground tabular-nums">{product.cost_price.toFixed(2)} د.ل</p>
-                      </button>
-                    ))}
-                  </div>
-                  {filteredProducts.length === 0 && searchQuery && (
-                    <div className="text-center py-8">
-                      <p className="text-sm text-muted-foreground mb-3">الصنف غير موجود</p>
-                      <Button variant="outline" className="gap-2" onClick={() => navigate('/products')}><Plus className="h-4 w-4" />إضافة صنف جديد</Button>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            <div className="flex flex-col rounded-xl bg-card shadow-card">
+            {/* LEFT: Invoice (large) */}
+            <div className="lg:col-span-2 flex flex-col rounded-xl bg-card shadow-card">
               <div className="flex items-center gap-3 border-b border-border p-4">
                 <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10"><Truck className="h-5 w-5 text-primary" /></div>
                 <div><h2 className="font-semibold text-card-foreground">فاتورة المشتريات</h2><p className="text-sm text-muted-foreground">{items.length} صنف</p></div>
