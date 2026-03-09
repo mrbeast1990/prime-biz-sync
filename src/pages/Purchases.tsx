@@ -43,6 +43,7 @@ export default function Purchases() {
   const [searchQuery, setSearchQuery] = useState('');
   const [barcodeInput, setBarcodeInput] = useState('');
   const [invoiceNumber, setInvoiceNumber] = useState('');
+  const searchRef = useRef<HTMLInputElement>(null);
 
   // History states
   const [viewInvoiceId, setViewInvoiceId] = useState<string | null>(null);
