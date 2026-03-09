@@ -343,7 +343,7 @@ export default function Purchases() {
                 <form onSubmit={handleBarcodeSubmit} className="mb-3">
                   <div className="relative"><Barcode className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" /><Input value={barcodeInput} onChange={(e) => setBarcodeInput(e.target.value)} placeholder="امسح الباركود..." className="pr-9" /></div>
                 </form>
-                <div className="relative mb-3"><Search className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" /><Input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="بحث بالاسم..." className="pr-9" /></div>
+                <div className="relative mb-3"><Search className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" /><Input ref={searchRef} value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); if (filteredProducts.length === 1) { addProduct(filteredProducts[0]); setSearchQuery(''); searchRef.current?.focus(); } } }} placeholder="بحث بالاسم..." className="pr-9" /></div>
                 <div className="flex-1 overflow-y-auto custom-scrollbar">
                   <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                     {filteredProducts.map((product) => (
