@@ -1,53 +1,50 @@
 
 
-# خطة التعديلات
+# خطة التعديلات الشاملة
 
-## 1. حفظ مسودة فاتورة البيع للتأمين (InsurancePOS)
-**الملف:** `src/pages/InsurancePOS.tsx`
-- إضافة `useEffect` لحفظ `cart` في `sessionStorage` عند مغادرة الصفحة (مثل ما هو موجود في Purchases)
-- إضافة `useEffect` لاستعادة المسودة عند فتح الصفحة
-- المفتاح: `insurance_pos_draft`
+## المشاكل والتعديلات المطلوبة
 
-## 2. اقتراح أسماء الأصناف المؤرشفة (كمية صفر) عند الكتابة
-**الملف:** `src/pages/Purchases.tsx`
-- حالياً `filteredProducts` يشمل كل الأصناف (بما فيها الصفرية). هذا جيد
-- المطلوب: عند كتابة اسم في حقل البحث، تظهر الأصناف ذات الكمية الصفرية أيضاً كاقتراحات (وهي تظهر فعلاً لأن فلتر المشتريات لا يستثني الصفرية)
+### 1. تعديل السداد (القيمة، النوع، التاريخ)
+- في `AccountDetailsDialog.tsx`: عند الضغط على صف "إيصال سداد"، إضافة زر تعديل يفتح نافذة تعديل تسمح بتغيير المبلغ المسدد وطريقة السداد وتاريخه
+- تحديث `handlePayment` لحفظ تاريخ السداد الفعلي (حالياً يُحفظ تاريخ الفاتورة نفسها)
 
-**الملف:** `src/components/products/ProductModal.tsx`
-- عند كتابة `trade_name`، إظهار قائمة اقتراحات من الأصناف الموجودة (بما فيها المؤرشفة) تحت حقل الاسم
-- جلب الأصناف بـ `supabase.from('products').select('trade_name').ilike('trade_name', '%query%')` أثناء الكتابة
-- عند اختيار اقتراح، تعبئة الاسم تلقائياً (وتحذير أن الاسم موجود مسبقاً)
+### 2. طباعة إيصال السداد يعرض الرصيد المتبقي
+- في `printUtils.ts`: تعديل `printPaymentReceipt` لقبول حقل `remainingBalance` وعرضه في الإيصال المطبوع بعد المبلغ المسدد
+- في `AccountDetailsDialog.tsx`: تمرير الرصيد المتبقي عند استدعاء `handlePrintPayment`
 
-## 3. تنقل بالكيبورد (Enter) في ProductModal حتى زر "إضافة"
-**الملف:** `src/components/products/ProductModal.tsx`
-- حالياً `batch_number` (ref index 10) يوقف Enter. المطلوب: عند Enter على آخر حقل، يركز على زر "إضافة الصنف" / "حفظ التغييرات"
-- إضافة `ref` لزر Submit وربطه بآخر `handleEnterNav`
+### 3. تغيير كل التواريخ من العربية للإنجليزية
+جميع استخدامات `toLocaleDateString('ar-SA')` و `toLocaleDateString('ar-EG')` تُستبدل بـ `toLocaleDateString('en-GB')` في:
+- `src/pages/Sales.tsx` (سطر 56, 111)
+- `src/pages/POS.tsx` (سطر 423, 473)
+- `src/pages/Purchases.tsx` (سطر 193, 347)
+- `src/pages/Users.tsx` (سطر 193)
+- `src/pages/InsuranceCustomers.tsx` (سطر 76)
+- `src/components/dashboard/AlertCard.tsx` (سطر 65)
 
-## 4. تنقل بالكيبورد في المشتريات — التركيز الافتراضي على اسم الصنف
-**الملف:** `src/pages/Purchases.tsx`
-- عند فتح الصفحة أو بعد إضافة صنف، التركيز التلقائي يكون على حقل البحث عن اسم الصنف
-- عند Enter في حقل البحث، إذا كان هناك نتيجة واحدة أضفها مباشرة
-- إضافة `ref` لحقل البحث + `useEffect` لتركيزه + `autoFocus`
+### 4. ترقيم الفواتير بصيغة `T` + رقم تسلسلي عام (بدون تاريخ)
+- تعديل `generateInvoiceNumber` في `POS.tsx`: بدلاً من `INV-YYYYMMDD-XXX`، يصبح `T` + رقم تسلسلي عام يعتمد على عدد كل الفواتير في قاعدة البيانات
+- تعديل نفس المنطق في `Purchases.tsx` (سطر 110-117): بدلاً من `PUR-YYYYMMDD-XXX`، نفس الصيغة `T` + رقم تسلسلي
 
-## 5. القائمة الجانبية مطوية افتراضياً + زر كيبورد للتبديل
-**الملفات:** `src/components/layout/Sidebar.tsx`، `src/components/layout/MainLayout.tsx`
-- تغيير `useState(false)` إلى `useState(true)` ليكون `collapsed = true` افتراضياً
-- إضافة مستمع لوحة مفاتيح: مفتاح `F2` (أو `]`) للتبديل بين ظهور/إخفاء القائمة
-- إضافة تنقل بالكيبورد: عندما تكون القائمة مفتوحة، أسهم أعلى/أسفل للتنقل بين العناصر + Enter للدخول
-- تحديث `MainLayout` لدعم الحالة المطوية (حالياً `mr-64` ثابت — يجب أن يتغير ديناميكياً)
-- لحل هذا: رفع حالة `collapsed` إلى `MainLayout` أو استخدام context/localStorage
+### 5. إصلاح رصيد الموردين (يظهر صفر في صفحة الحسابات)
+**المشكلة**: صفحة الحسابات تعرض `contact.balance` من الجدول مباشرة، لكن هذا الحقل لا يُحدَّث دائماً بشكل صحيح. بينما في تفاصيل الحساب يُحسب الرصيد من مجموع الفواتير.
+**الحل**: في `Accounts.tsx`، حساب الرصيد الفعلي لكل مورد/زبون من الفواتير المرتبطة بدل الاعتماد على حقل `balance` فقط. أي: `الرصيد = مجموع الفواتير - مجموع المسدد`
 
-### الحل التقني للقائمة:
-- إنشاء React Context بسيط `SidebarContext` يحتوي `collapsed` و `toggleSidebar`
-- `MainLayout` يوفر الـ Provider
-- `Sidebar` يستهلكه
-- `useEffect` في `MainLayout` يستمع لـ `F2` ويستدعي `toggleSidebar`
-- `mr-64` → `mr-20` عند الطي
+### 6. تلوين الأرصدة (سالب = أحمر، موجب = أخضر)
+- في `Accounts.tsx` و `AccountDetailsDialog.tsx`: إضافة لون أحمر للأرصدة السالبة (علينا) وأخضر للموجبة (لنا)
+
+### 7. تغيير خط أسماء الأصناف والاسم العلمي الإنجليزي
+**المشكلة**: `font-sans` المستخدم حالياً في `ProductTable.tsx` يعرض خط غير رسمي للنصوص الإنجليزية
+**الحل**: استبدال `font-sans` بخط أنسب. سنضيف فئة CSS مخصصة تستخدم خط `"Segoe UI", "Helvetica Neue", Arial, sans-serif` — أو الأفضل: إزالة `font-sans` والاعتماد على `IBM Plex Sans` المُعرَّف عالمياً في `index.css` كخط أساسي (وهو خط احترافي مناسب للنصوص الإنجليزية)
 
 ## الملفات المتأثرة
-1. `src/pages/InsurancePOS.tsx` — حفظ/استعادة مسودة
-2. `src/components/products/ProductModal.tsx` — اقتراحات الأسماء + Enter حتى زر الإضافة
-3. `src/pages/Purchases.tsx` — تركيز تلقائي على البحث + Enter لإضافة
-4. `src/components/layout/Sidebar.tsx` — مطوية افتراضياً + تنقل كيبورد
-5. `src/components/layout/MainLayout.tsx` — Context للقائمة + F2 listener + margin ديناميكي
+- `src/components/accounts/AccountDetailsDialog.tsx` — تعديل السداد + إيصال الرصيد المتبقي + تلوين
+- `src/utils/printUtils.ts` — إضافة remainingBalance لإيصال السداد
+- `src/pages/Sales.tsx` — تواريخ إنجليزية
+- `src/pages/POS.tsx` — تواريخ إنجليزية + ترقيم T
+- `src/pages/Purchases.tsx` — تواريخ إنجليزية + ترقيم T
+- `src/pages/Users.tsx` — تاريخ إنجليزي
+- `src/pages/InsuranceCustomers.tsx` — تاريخ إنجليزي
+- `src/components/dashboard/AlertCard.tsx` — تاريخ إنجليزي
+- `src/pages/Accounts.tsx` — إصلاح الأرصدة + تلوين
+- `src/components/products/ProductTable.tsx` — تحسين خط الأصناف الإنجليزية
 

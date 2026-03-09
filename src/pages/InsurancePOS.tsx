@@ -11,6 +11,8 @@ import { toast } from '@/hooks/use-toast';
 import { InsuranceCustomerDialog } from '@/components/insurance/InsuranceCustomerDialog';
 import { useProducts, useCreateInsuranceSale, useUpdateProductStock } from '@/hooks/useSupabaseData';
 
+const DRAFT_KEY = 'insurance_pos_draft';
+
 export default function InsurancePOS() {
   const { data: products = [], isLoading } = useProducts();
   const createSale = useCreateInsuranceSale();
@@ -21,6 +23,27 @@ export default function InsurancePOS() {
   const [barcodeInput, setBarcodeInput] = useState('');
   const [showCustomerDialog, setShowCustomerDialog] = useState(false);
   const barcodeRef = useRef<HTMLInputElement>(null);
+
+  // Restore draft on mount
+  useEffect(() => {
+    try {
+      const draft = sessionStorage.getItem(DRAFT_KEY);
+      if (draft) {
+        const parsed = JSON.parse(draft);
+        if (Array.isArray(parsed) && parsed.length > 0) setCart(parsed);
+        sessionStorage.removeItem(DRAFT_KEY);
+      }
+    } catch { /* ignore */ }
+  }, []);
+
+  // Save draft on unmount
+  useEffect(() => {
+    return () => {
+      if (cart.length > 0) {
+        sessionStorage.setItem(DRAFT_KEY, JSON.stringify(cart));
+      }
+    };
+  }, [cart]);
 
   const filteredProducts = products.filter(
     (product) =>
@@ -72,7 +95,7 @@ export default function InsurancePOS() {
   };
 
   const removeFromCart = (productId: string) => setCart(cart.filter((item) => item.product.id !== productId));
-  const clearCart = () => setCart([]);
+  const clearCart = () => { setCart([]); sessionStorage.removeItem(DRAFT_KEY); };
   const total = cart.reduce((sum, item) => sum + item.total, 0);
   const itemCount = cart.reduce((sum, item) => sum + item.quantity, 0);
 
