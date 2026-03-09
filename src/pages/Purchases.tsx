@@ -75,6 +75,9 @@ export default function Purchases() {
     };
   }, [items, selectedSupplier, invoiceNumber]);
 
+  // Auto-focus search field
+  useEffect(() => { searchRef.current?.focus(); }, []);
+
   const filteredProducts = products.filter(
     (p) =>
       p.trade_name.includes(searchQuery) ||
