@@ -106,6 +106,8 @@ export default function Purchases() {
         sale_price: product.sale_price || 0,
       }]);
     }
+    // Re-focus search after adding
+    setTimeout(() => searchRef.current?.focus(), 50);
   };
 
   const [showNotFoundDialog, setShowNotFoundDialog] = useState(false);
