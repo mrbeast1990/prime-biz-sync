@@ -45,15 +45,25 @@ export function ProductModal({ isOpen, onClose, onSave, product }: ProductModalP
   const [showAddCategory, setShowAddCategory] = useState(false);
   const [isShortcut, setIsShortcut] = useState(false);
 
-  // Refs for Enter navigation
+  // Suggestions state
+  const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+
+  // Refs for Enter navigation (0-10 = fields, 11 = submit button)
   const fieldRefs = useRef<(HTMLInputElement | HTMLSelectElement | null)[]>([]);
+  const submitRef = useRef<HTMLButtonElement>(null);
   const setRef = (index: number) => (el: HTMLInputElement | HTMLSelectElement | null) => { fieldRefs.current[index] = el; };
 
   const handleEnterNav = (e: KeyboardEvent, currentIndex: number) => {
     if (e.key === 'Enter') {
       e.preventDefault();
-      const next = fieldRefs.current[currentIndex + 1];
-      if (next) next.focus();
+      if (currentIndex === 10) {
+        // Last field → focus submit button
+        submitRef.current?.focus();
+      } else {
+        const next = fieldRefs.current[currentIndex + 1];
+        if (next) next.focus();
+      }
     }
   };
 
@@ -82,6 +92,7 @@ export function ProductModal({ isOpen, onClose, onSave, product }: ProductModalP
     image_url: '', stock_quantity: 0, min_stock: 0, cost_price: 0, sale_price: 0,
     batch_number: '',
   });
+
   useEffect(() => {
     if (product) {
       setFormData({
@@ -103,7 +114,31 @@ export function ProductModal({ isOpen, onClose, onSave, product }: ProductModalP
       });
       setIsShortcut(false);
     }
+    setSuggestions([]);
+    setShowSuggestions(false);
   }, [product, isOpen]);
+
+  // Fetch suggestions when trade_name changes
+  useEffect(() => {
+    const query = formData.trade_name.trim();
+    if (query.length < 2) { setSuggestions([]); setShowSuggestions(false); return; }
+    const timer = setTimeout(async () => {
+      const { data } = await supabase
+        .from('products')
+        .select('trade_name')
+        .ilike('trade_name', `%${query}%`)
+        .limit(8);
+      if (data && data.length > 0) {
+        const names = data.map(d => d.trade_name).filter(n => n !== formData.trade_name);
+        setSuggestions(names);
+        setShowSuggestions(names.length > 0);
+      } else {
+        setSuggestions([]);
+        setShowSuggestions(false);
+      }
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [formData.trade_name]);
 
   const toggleShortcut = () => {
     if (!product) return;
@@ -127,7 +162,6 @@ export function ProductModal({ isOpen, onClose, onSave, product }: ProductModalP
     e.preventDefault();
     setChecking(true);
     try {
-      // Check for duplicate trade_name
       const { data: existing } = await supabase
         .from('products')
         .select('id')
@@ -178,12 +212,33 @@ export function ProductModal({ isOpen, onClose, onSave, product }: ProductModalP
                 </Button>
               </div>
             </div>
-            <div className="space-y-2">
+            <div className="space-y-2 relative">
               <Label htmlFor="trade_name">اسم الصنف</Label>
               <Input id="trade_name" ref={setRef(1)} value={formData.trade_name}
                 onChange={(e) => setFormData({ ...formData, trade_name: e.target.value })}
                 onKeyDown={(e) => handleEnterNav(e, 1)}
-                placeholder="اسم الصنف" className="input-focus" required />
+                onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
+                onFocus={() => suggestions.length > 0 && setShowSuggestions(true)}
+                placeholder="اسم الصنف" className="input-focus" required autoComplete="off" />
+              {showSuggestions && suggestions.length > 0 && (
+                <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-popover border border-border rounded-lg shadow-lg max-h-40 overflow-y-auto">
+                  {suggestions.map((name, i) => (
+                    <button
+                      key={i}
+                      type="button"
+                      className="w-full text-right px-3 py-2 text-sm hover:bg-muted transition-colors"
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        setFormData({ ...formData, trade_name: name });
+                        setShowSuggestions(false);
+                        toast({ title: 'تحذير', description: 'هذا الاسم موجود بالفعل في قاعدة البيانات', variant: 'destructive' });
+                      }}
+                    >
+                      {name}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
             <div className="space-y-2">
               <Label htmlFor="scientific_name">الاسم العلمي</Label>
@@ -297,14 +352,16 @@ export function ProductModal({ isOpen, onClose, onSave, product }: ProductModalP
               <Label htmlFor="batch_number">رقم التشغيلة</Label>
               <Input id="batch_number" ref={setRef(10)} value={formData.batch_number}
                 onChange={(e) => setFormData({ ...formData, batch_number: e.target.value })}
-                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); } }}
+                onKeyDown={(e) => handleEnterNav(e, 10)}
                 placeholder="اختياري" className="input-focus" />
             </div>
           </div>
 
           <div className="flex justify-end gap-3 pt-4 border-t">
             <Button type="button" variant="outline" onClick={onClose}>إلغاء</Button>
-            <Button type="submit" disabled={checking}>{checking ? <Loader2 className="h-4 w-4 animate-spin" /> : product ? 'حفظ التغييرات' : 'إضافة الصنف'}</Button>
+            <Button type="submit" ref={submitRef} disabled={checking}>
+              {checking ? <Loader2 className="h-4 w-4 animate-spin" /> : product ? 'حفظ التغييرات' : 'إضافة الصنف'}
+            </Button>
           </div>
         </form>
       </DialogContent>

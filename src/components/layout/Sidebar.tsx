@@ -1,21 +1,11 @@
-import { useState } from 'react';
-import { NavLink, useLocation } from 'react-router-dom';
+import { useRef, useEffect, useState, useCallback } from 'react';
+import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import {
-  LayoutDashboard,
-  Package,
-  ShoppingCart,
-  Settings,
-  ChevronRight,
-  ChevronLeft,
-  Zap,
-  Shield,
-  Truck,
-  Users,
-  Wallet,
-  BarChart3,
-  UserCog,
+  LayoutDashboard, Package, ShoppingCart, Settings, ChevronRight, ChevronLeft,
+  Zap, Shield, Truck, Users, Wallet, BarChart3, UserCog,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useSidebarContext } from '@/contexts/SidebarContext';
 
 interface NavItem {
   title: string;
@@ -37,8 +27,40 @@ const navItems: NavItem[] = [
 ];
 
 export function Sidebar() {
-  const [collapsed, setCollapsed] = useState(false);
+  const { collapsed, toggleSidebar } = useSidebarContext();
   const location = useLocation();
+  const navigate = useNavigate();
+  const [focusedIndex, setFocusedIndex] = useState(-1);
+  const itemRefs = useRef<(HTMLAnchorElement | null)[]>([]);
+
+  // Keyboard navigation when sidebar is expanded
+  const handleKeyDown = useCallback((e: KeyboardEvent) => {
+    if (collapsed) return;
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setFocusedIndex(prev => {
+        const next = prev < navItems.length - 1 ? prev + 1 : 0;
+        itemRefs.current[next]?.focus();
+        return next;
+      });
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setFocusedIndex(prev => {
+        const next = prev > 0 ? prev - 1 : navItems.length - 1;
+        itemRefs.current[next]?.focus();
+        return next;
+      });
+    } else if (e.key === 'Enter' && focusedIndex >= 0) {
+      navigate(navItems[focusedIndex].href);
+    }
+  }, [collapsed, focusedIndex, navigate]);
+
+  useEffect(() => {
+    if (!collapsed) {
+      window.addEventListener('keydown', handleKeyDown);
+      return () => window.removeEventListener('keydown', handleKeyDown);
+    }
+  }, [collapsed, handleKeyDown]);
 
   return (
     <aside
@@ -70,18 +92,21 @@ export function Sidebar() {
       {/* Navigation */}
       <nav className="mt-6 px-3">
         <ul className="space-y-1">
-          {navItems.map((item) => {
+          {navItems.map((item, index) => {
             const isActive = location.pathname === item.href;
             return (
               <li key={item.href}>
                 <NavLink
                   to={item.href}
+                  ref={el => { itemRefs.current[index] = el; }}
                   className={cn(
-                    'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200',
+                    'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200 outline-none',
                     isActive
                       ? 'bg-sidebar-primary text-sidebar-primary-foreground shadow-md'
-                      : 'text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
+                      : 'text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground',
+                    focusedIndex === index && !isActive && 'ring-2 ring-sidebar-primary/50'
                   )}
+                  onFocus={() => setFocusedIndex(index)}
                 >
                   <item.icon className={cn('h-5 w-5 flex-shrink-0', collapsed && 'mx-auto')} />
                   {!collapsed && <span>{item.title}</span>}
@@ -94,7 +119,7 @@ export function Sidebar() {
 
       {/* Collapse Toggle */}
       <button
-        onClick={() => setCollapsed(!collapsed)}
+        onClick={toggleSidebar}
         className="absolute -left-3 top-20 flex h-6 w-6 items-center justify-center rounded-full bg-sidebar-primary text-sidebar-primary-foreground shadow-lg transition-transform hover:scale-110"
       >
         {collapsed ? (
@@ -108,8 +133,8 @@ export function Sidebar() {
       {!collapsed && (
         <div className="absolute bottom-4 right-4 left-4">
           <div className="rounded-lg bg-sidebar-accent p-3">
-            <p className="text-xs text-sidebar-foreground/60">الإصدار 1.0.0</p>
-            <p className="text-xs text-sidebar-foreground/60">نظام نقاط البيع المتكامل</p>
+            <p className="text-xs text-sidebar-foreground/60">F2 لطي/فتح القائمة</p>
+            <p className="text-xs text-sidebar-foreground/60">↑↓ للتنقل | Enter للدخول</p>
           </div>
         </div>
       )}
