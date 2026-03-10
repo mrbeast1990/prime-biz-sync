@@ -14,6 +14,8 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { supabase } from '@/integrations/supabase/client';
 
+import { exportBackup } from '@/utils/backupUtils';
+
 interface HeaderProps {
   title: string;
 }
@@ -21,6 +23,7 @@ interface HeaderProps {
 export function Header({ title }: HeaderProps) {
   const navigate = useNavigate();
   const [displayName, setDisplayName] = useState('المستخدم');
+  const [loggingOut, setLoggingOut] = useState(false);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
@@ -31,6 +34,13 @@ export function Header({ title }: HeaderProps) {
   }, []);
 
   const handleLogout = async () => {
+    setLoggingOut(true);
+    try {
+      await exportBackup();
+      toast({ title: '✅ تم حفظ نسخة احتياطية على جهازك' });
+    } catch (e) {
+      console.error('Backup failed', e);
+    }
     await supabase.auth.signOut();
     navigate('/auth');
   };
