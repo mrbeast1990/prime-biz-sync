@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Bell, Search, User, LogOut } from 'lucide-react';
+import { Bell, Search, User, LogOut, Loader2 } from 'lucide-react';
+import { toast } from '@/hooks/use-toast';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import {
@@ -13,6 +14,8 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { supabase } from '@/integrations/supabase/client';
 
+import { exportBackup } from '@/utils/backupUtils';
+
 interface HeaderProps {
   title: string;
 }
@@ -20,6 +23,7 @@ interface HeaderProps {
 export function Header({ title }: HeaderProps) {
   const navigate = useNavigate();
   const [displayName, setDisplayName] = useState('المستخدم');
+  const [loggingOut, setLoggingOut] = useState(false);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
@@ -30,6 +34,13 @@ export function Header({ title }: HeaderProps) {
   }, []);
 
   const handleLogout = async () => {
+    setLoggingOut(true);
+    try {
+      await exportBackup();
+      toast({ title: '✅ تم حفظ نسخة احتياطية على جهازك' });
+    } catch (e) {
+      console.error('Backup failed', e);
+    }
     await supabase.auth.signOut();
     navigate('/auth');
   };
@@ -66,9 +77,9 @@ export function Header({ title }: HeaderProps) {
             <DropdownMenuItem>الملف الشخصي</DropdownMenuItem>
             <DropdownMenuItem onClick={() => navigate('/settings')}>الإعدادات</DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem className="text-destructive" onClick={handleLogout}>
-              <LogOut className="h-4 w-4 ml-2" />
-              تسجيل الخروج
+            <DropdownMenuItem className="text-destructive" onClick={handleLogout} disabled={loggingOut}>
+              {loggingOut ? <Loader2 className="h-4 w-4 ml-2 animate-spin" /> : <LogOut className="h-4 w-4 ml-2" />}
+              {loggingOut ? 'جاري الحفظ...' : 'تسجيل الخروج'}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
