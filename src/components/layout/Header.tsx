@@ -77,9 +77,9 @@ export function Header({ title }: HeaderProps) {
             <DropdownMenuItem>الملف الشخصي</DropdownMenuItem>
             <DropdownMenuItem onClick={() => navigate('/settings')}>الإعدادات</DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem className="text-destructive" onClick={handleLogout}>
-              <LogOut className="h-4 w-4 ml-2" />
-              تسجيل الخروج
+            <DropdownMenuItem className="text-destructive" onClick={handleLogout} disabled={loggingOut}>
+              {loggingOut ? <Loader2 className="h-4 w-4 ml-2 animate-spin" /> : <LogOut className="h-4 w-4 ml-2" />}
+              {loggingOut ? 'جاري الحفظ...' : 'تسجيل الخروج'}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
