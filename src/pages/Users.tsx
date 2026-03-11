@@ -20,17 +20,8 @@ interface UserProfile {
   role?: string;
 }
 
-const roleLabels: Record<string, string> = {
-  admin: 'مدير',
-  manager: 'مشرف',
-  user: 'مستخدم',
-};
-
-const roleBadgeVariant: Record<string, 'default' | 'secondary' | 'outline'> = {
-  admin: 'default',
-  manager: 'secondary',
-  user: 'outline',
-};
+const roleLabels: Record<string, string> = { admin: 'مدير', manager: 'مشرف', user: 'مستخدم' };
+const roleBadgeVariant: Record<string, 'default' | 'secondary' | 'outline'> = { admin: 'default', manager: 'secondary', user: 'outline' };
 
 export default function Users() {
   const queryClient = useQueryClient();
@@ -44,173 +35,105 @@ export default function Users() {
   const { data: users = [], isLoading } = useQuery({
     queryKey: ['users-with-roles'],
     queryFn: async () => {
-      const { data: profiles, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .order('created_at', { ascending: true });
+      const { data: profiles, error } = await supabase.from('profiles').select('*').order('created_at', { ascending: true });
       if (error) throw error;
-
-      const { data: roles } = await supabase
-        .from('user_roles')
-        .select('*');
-
-      return (profiles || []).map((p) => ({
-        ...p,
-        role: roles?.find((r) => r.user_id === p.user_id)?.role || 'user',
-      })) as UserProfile[];
+      const { data: roles } = await supabase.from('user_roles').select('*');
+      return (profiles || []).map((p) => ({ ...p, role: roles?.find((r) => r.user_id === p.user_id)?.role || 'user' })) as UserProfile[];
     },
   });
 
   const changeRole = useMutation({
     mutationFn: async ({ userId, role }: { userId: string; role: string }) => {
-      // Delete existing role
       await supabase.from('user_roles').delete().eq('user_id', userId);
-      // Insert new role
-      const { error } = await supabase
-        .from('user_roles')
-        .insert({ user_id: userId, role: role as any });
+      const { error } = await supabase.from('user_roles').insert({ user_id: userId, role: role as any });
       if (error) throw error;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['users-with-roles'] });
-      toast({ title: 'تم تغيير الصلاحية بنجاح' });
-    },
-    onError: (err: any) => {
-      toast({ title: 'خطأ', description: err.message, variant: 'destructive' });
-    },
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['users-with-roles'] }); toast({ title: 'تم تغيير الصلاحية بنجاح' }); },
+    onError: (err: any) => { toast({ title: 'خطأ', description: err.message, variant: 'destructive' }); },
   });
 
   const handleAddUser = async (e: React.FormEvent) => {
     e.preventDefault();
     setAddLoading(true);
-    
-    // Sign up the new user
     const email = newUsername.includes('@') ? newUsername : `${newUsername}@app.local`;
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password: newPassword,
-      options: { data: { display_name: newName } },
-    });
-
-    if (error) {
-      toast({ title: 'خطأ', description: error.message, variant: 'destructive' });
-      setAddLoading(false);
-      return;
-    }
-
-    // Assign role if not default
-    if (data.user && newRole !== 'user') {
-      await supabase.from('user_roles').insert({ user_id: data.user.id, role: newRole as any });
-    }
-
+    const { data, error } = await supabase.auth.signUp({ email, password: newPassword, options: { data: { display_name: newName } } });
+    if (error) { toast({ title: 'خطأ', description: error.message, variant: 'destructive' }); setAddLoading(false); return; }
+    if (data.user && newRole !== 'user') { await supabase.from('user_roles').insert({ user_id: data.user.id, role: newRole as any }); }
     toast({ title: 'تم إضافة المستخدم بنجاح' });
     queryClient.invalidateQueries({ queryKey: ['users-with-roles'] });
-    setAddOpen(false);
-    setNewUsername('');
-    setNewPassword('');
-    setNewName('');
-    setNewRole('user');
-    setAddLoading(false);
+    setAddOpen(false); setNewUsername(''); setNewPassword(''); setNewName(''); setNewRole('user'); setAddLoading(false);
   };
 
   return (
     <MainLayout title="إدارة المستخدمين">
       <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Shield className="h-6 w-6 text-primary" />
-            <h2 className="text-lg font-bold">المستخدمون والصلاحيات</h2>
-          </div>
+        <div className="flex items-center justify-between flex-wrap gap-3">
+          <div className="flex items-center gap-2"><Shield className="h-6 w-6 text-primary" /><h2 className="text-lg font-bold">المستخدمون والصلاحيات</h2></div>
           <Dialog open={addOpen} onOpenChange={setAddOpen}>
-            <DialogTrigger asChild>
-              <Button>
-                <UserPlus className="h-4 w-4 ml-2" />
-                إضافة مستخدم
-              </Button>
-            </DialogTrigger>
+            <DialogTrigger asChild><Button><UserPlus className="h-4 w-4 ml-2" />إضافة مستخدم</Button></DialogTrigger>
             <DialogContent dir="rtl">
-              <DialogHeader>
-                <DialogTitle>إضافة مستخدم جديد</DialogTitle>
-              </DialogHeader>
+              <DialogHeader><DialogTitle>إضافة مستخدم جديد</DialogTitle></DialogHeader>
               <form onSubmit={handleAddUser} className="space-y-4">
-                <div className="space-y-2">
-                  <Label>الاسم</Label>
-                  <Input value={newName} onChange={e => setNewName(e.target.value)} required />
-                </div>
-                <div className="space-y-2">
-                  <Label>اسم المستخدم</Label>
-                  <Input value={newUsername} onChange={e => setNewUsername(e.target.value)} required placeholder="اسم الدخول" />
-                </div>
-                <div className="space-y-2">
-                  <Label>كلمة المرور</Label>
-                  <Input type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} required minLength={6} />
-                </div>
-                <div className="space-y-2">
-                  <Label>الصلاحية</Label>
-                  <Select value={newRole} onValueChange={setNewRole}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="admin">مدير</SelectItem>
-                      <SelectItem value="manager">مشرف</SelectItem>
-                      <SelectItem value="user">مستخدم</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <Button type="submit" className="w-full" disabled={addLoading}>
-                  {addLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'إضافة'}
-                </Button>
+                <div className="space-y-2"><Label>الاسم</Label><Input value={newName} onChange={e => setNewName(e.target.value)} required /></div>
+                <div className="space-y-2"><Label>اسم المستخدم</Label><Input value={newUsername} onChange={e => setNewUsername(e.target.value)} required placeholder="اسم الدخول" /></div>
+                <div className="space-y-2"><Label>كلمة المرور</Label><Input type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} required minLength={6} /></div>
+                <div className="space-y-2"><Label>الصلاحية</Label><Select value={newRole} onValueChange={setNewRole}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="admin">مدير</SelectItem><SelectItem value="manager">مشرف</SelectItem><SelectItem value="user">مستخدم</SelectItem></SelectContent></Select></div>
+                <Button type="submit" className="w-full" disabled={addLoading}>{addLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'إضافة'}</Button>
               </form>
             </DialogContent>
           </Dialog>
         </div>
 
         {isLoading ? (
-          <div className="flex justify-center py-12">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          </div>
+          <div className="flex justify-center py-12"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
         ) : (
-          <div className="rounded-lg border bg-card">
-            <Table>
-              <TableHeader>
-                <TableRow>
+          <>
+            {/* Mobile Cards */}
+            <div className="md:hidden space-y-3">
+              {users.map((user) => (
+                <div key={user.id} className="rounded-xl bg-card p-4 shadow-card">
+                  <div className="flex items-center justify-between">
+                    <p className="font-medium text-card-foreground">{user.display_name || 'بدون اسم'}</p>
+                    <Badge variant={roleBadgeVariant[user.role || 'user']}>{roleLabels[user.role || 'user']}</Badge>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">{new Date(user.created_at).toLocaleDateString('en-GB')}</p>
+                  <div className="mt-3">
+                    <Select value={user.role || 'user'} onValueChange={(role) => changeRole.mutate({ userId: user.user_id, role })}>
+                      <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                      <SelectContent><SelectItem value="admin">مدير</SelectItem><SelectItem value="manager">مشرف</SelectItem><SelectItem value="user">مستخدم</SelectItem></SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Desktop Table */}
+            <div className="hidden md:block rounded-lg border bg-card">
+              <Table>
+                <TableHeader><TableRow>
                   <TableHead className="text-right">الاسم</TableHead>
                   <TableHead className="text-right">الصلاحية</TableHead>
                   <TableHead className="text-right">تاريخ الإنشاء</TableHead>
                   <TableHead className="text-right">تغيير الصلاحية</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {users.map((user) => (
-                  <TableRow key={user.id}>
-                    <TableCell className="font-medium">{user.display_name || 'بدون اسم'}</TableCell>
-                    <TableCell>
-                      <Badge variant={roleBadgeVariant[user.role || 'user']}>
-                        {roleLabels[user.role || 'user']}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>{new Date(user.created_at).toLocaleDateString('en-GB')}</TableCell>
-                    <TableCell>
-                      <Select
-                        value={user.role || 'user'}
-                        onValueChange={(role) => changeRole.mutate({ userId: user.user_id, role })}
-                      >
-                        <SelectTrigger className="w-32">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="admin">مدير</SelectItem>
-                          <SelectItem value="manager">مشرف</SelectItem>
-                          <SelectItem value="user">مستخدم</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+                </TableRow></TableHeader>
+                <TableBody>
+                  {users.map((user) => (
+                    <TableRow key={user.id}>
+                      <TableCell className="font-medium">{user.display_name || 'بدون اسم'}</TableCell>
+                      <TableCell><Badge variant={roleBadgeVariant[user.role || 'user']}>{roleLabels[user.role || 'user']}</Badge></TableCell>
+                      <TableCell>{new Date(user.created_at).toLocaleDateString('en-GB')}</TableCell>
+                      <TableCell>
+                        <Select value={user.role || 'user'} onValueChange={(role) => changeRole.mutate({ userId: user.user_id, role })}>
+                          <SelectTrigger className="w-32"><SelectValue /></SelectTrigger>
+                          <SelectContent><SelectItem value="admin">مدير</SelectItem><SelectItem value="manager">مشرف</SelectItem><SelectItem value="user">مستخدم</SelectItem></SelectContent>
+                        </Select>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </>
         )}
       </div>
     </MainLayout>
