@@ -1,50 +1,127 @@
 
 
-# خطة التعديلات الشاملة
+# خطة شاملة: نظام الاستجابة + تحسينات الطباعة والاستيراد
 
-## المشاكل والتعديلات المطلوبة
+## 1. نظام الاستجابة (Responsive) — جميع الصفحات
 
-### 1. تعديل السداد (القيمة، النوع، التاريخ)
-- في `AccountDetailsDialog.tsx`: عند الضغط على صف "إيصال سداد"، إضافة زر تعديل يفتح نافذة تعديل تسمح بتغيير المبلغ المسدد وطريقة السداد وتاريخه
-- تحديث `handlePayment` لحفظ تاريخ السداد الفعلي (حالياً يُحفظ تاريخ الفاتورة نفسها)
+### 1.1 القائمة الجانبية (Sidebar + Header)
+**الملفات:** `Sidebar.tsx`, `Header.tsx`, `MainLayout.tsx`, `SidebarContext.tsx`
 
-### 2. طباعة إيصال السداد يعرض الرصيد المتبقي
-- في `printUtils.ts`: تعديل `printPaymentReceipt` لقبول حقل `remainingBalance` وعرضه في الإيصال المطبوع بعد المبلغ المسدد
-- في `AccountDetailsDialog.tsx`: تمرير الرصيد المتبقي عند استدعاء `handlePrintPayment`
+- **موبايل (< 768px):** إخفاء Sidebar تماماً + إضافة زر Hamburger (☰) في Header يفتح Sheet/Drawer من اليمين
+- **لابتوب:** تبقى كما هي (ثابتة مع F2 للطي)
+- استخدام `useIsMobile()` الموجود في `use-mobile.tsx`
+- في `MainLayout`: إزالة `mr-64/mr-20` على الموبايل (لأن الـ Sidebar تختفي)
+- في `Header`: إضافة `Menu` icon يظهر فقط على `md:hidden` ويفتح Sheet يحتوي روابط القائمة
 
-### 3. تغيير كل التواريخ من العربية للإنجليزية
-جميع استخدامات `toLocaleDateString('ar-SA')` و `toLocaleDateString('ar-EG')` تُستبدل بـ `toLocaleDateString('en-GB')` في:
-- `src/pages/Sales.tsx` (سطر 56, 111)
-- `src/pages/POS.tsx` (سطر 423, 473)
-- `src/pages/Purchases.tsx` (سطر 193, 347)
-- `src/pages/Users.tsx` (سطر 193)
-- `src/pages/InsuranceCustomers.tsx` (سطر 76)
-- `src/components/dashboard/AlertCard.tsx` (سطر 65)
+### 1.2 الجداول → بطاقات متكررة على الموبايل
+**الصفحات المتأثرة:** Accounts, Reports, Treasury, Users, InsuranceCustomers, Products (ProductTable)
 
-### 4. ترقيم الفواتير بصيغة `T` + رقم تسلسلي عام (بدون تاريخ)
-- تعديل `generateInvoiceNumber` في `POS.tsx`: بدلاً من `INV-YYYYMMDD-XXX`، يصبح `T` + رقم تسلسلي عام يعتمد على عدد كل الفواتير في قاعدة البيانات
-- تعديل نفس المنطق في `Purchases.tsx` (سطر 110-117): بدلاً من `PUR-YYYYMMDD-XXX`، نفس الصيغة `T` + رقم تسلسلي
+- إنشاء نمط مشترك: على `md` وأكبر يظهر الجدول، على الموبايل تظهر بطاقات (cards)
+- كل بطاقة تعرض البيانات بشكل عمودي مع labels واضحة
+- استخدام `hidden md:block` للجدول و `md:hidden` للبطاقات
 
-### 5. إصلاح رصيد الموردين (يظهر صفر في صفحة الحسابات)
-**المشكلة**: صفحة الحسابات تعرض `contact.balance` من الجدول مباشرة، لكن هذا الحقل لا يُحدَّث دائماً بشكل صحيح. بينما في تفاصيل الحساب يُحسب الرصيد من مجموع الفواتير.
-**الحل**: في `Accounts.tsx`، حساب الرصيد الفعلي لكل مورد/زبون من الفواتير المرتبطة بدل الاعتماد على حقل `balance` فقط. أي: `الرصيد = مجموع الفواتير - مجموع المسدد`
+### 1.3 Grid Layouts → تكديس عمودي
+**الصفحات:** Dashboard (`md:grid-cols-5` → `grid-cols-2`), Reports (`lg:grid-cols-4` → `grid-cols-2`), Treasury, Settings
 
-### 6. تلوين الأرصدة (سالب = أحمر، موجب = أخضر)
-- في `Accounts.tsx` و `AccountDetailsDialog.tsx`: إضافة لون أحمر للأرصدة السالبة (علينا) وأخضر للموجبة (لنا)
+- معظمها تستخدم `grid-cols-1 md:grid-cols-X` بالفعل
+- Dashboard: `md:grid-cols-5` → `grid-cols-2 md:grid-cols-5` (مع العنصر الخامس يأخذ `col-span-2` على الموبايل)
 
-### 7. تغيير خط أسماء الأصناف والاسم العلمي الإنجليزي
-**المشكلة**: `font-sans` المستخدم حالياً في `ProductTable.tsx` يعرض خط غير رسمي للنصوص الإنجليزية
-**الحل**: استبدال `font-sans` بخط أنسب. سنضيف فئة CSS مخصصة تستخدم خط `"Segoe UI", "Helvetica Neue", Arial, sans-serif` — أو الأفضل: إزالة `font-sans` والاعتماد على `IBM Plex Sans` المُعرَّف عالمياً في `index.css` كخط أساسي (وهو خط احترافي مناسب للنصوص الإنجليزية)
+### 1.4 POS & Forms → كامل العرض على الموبايل
+**الصفحات:** POS, InsurancePOS, Purchases
 
-## الملفات المتأثرة
-- `src/components/accounts/AccountDetailsDialog.tsx` — تعديل السداد + إيصال الرصيد المتبقي + تلوين
-- `src/utils/printUtils.ts` — إضافة remainingBalance لإيصال السداد
-- `src/pages/Sales.tsx` — تواريخ إنجليزية
-- `src/pages/POS.tsx` — تواريخ إنجليزية + ترقيم T
-- `src/pages/Purchases.tsx` — تواريخ إنجليزية + ترقيم T
-- `src/pages/Users.tsx` — تاريخ إنجليزي
-- `src/pages/InsuranceCustomers.tsx` — تاريخ إنجليزي
-- `src/components/dashboard/AlertCard.tsx` — تاريخ إنجليزي
-- `src/pages/Accounts.tsx` — إصلاح الأرصدة + تلوين
-- `src/components/products/ProductTable.tsx` — تحسين خط الأصناف الإنجليزية
+- POS: `lg:grid-cols-12` → على الموبايل عمود واحد، مع السلة أعلى والبحث أسفل (أو tabs)
+- Purchases: `lg:grid-cols-3` → عمود واحد على الموبايل
+- الأزرار والـ inputs تأخذ `w-full` على الموبايل
+
+---
+
+## 2. طباعة PDF من بطاقة الصنف — خيار اختيار الأصناف
+
+### 2.1 نافذة اختيار الأصناف للطباعة
+**ملف جديد:** `src/components/products/PrintSelectDialog.tsx`
+
+- Dialog يظهر عند الضغط على "طباعة PDF"
+- قائمة بكل الأصناف مع checkbox لكل صنف
+- زر "تحديد الكل" / "إلغاء التحديد"
+- زر "طباعة المحدد"
+
+### 2.2 تعديل أعمدة الطباعة
+**الملف:** `src/utils/printUtils.ts` → `printProductsTable`
+
+- استبدال عمود "الكود" بـ "Batch No" (`batch_number`)
+- إزالة عمود "سعر البيع"
+- عمود الصلاحية: عرض تاريخ الصلاحية الفعلي (`expiry_date`) بدلاً من "خاضع للصلاحية". إذا لا يوجد تاريخ يُكتب "—"
+
+### 2.3 ربط الـ Dialog بصفحة Products
+**الملف:** `src/pages/Products.tsx`
+
+- `handlePrintPDF` يفتح `PrintSelectDialog` بدلاً من طباعة مباشرة
+
+---
+
+## 3. تحسين الاستيراد — تعديل صنف بصنف
+
+### 3.1 تعديل `ImportPreviewDialog`
+**الملف:** `src/components/products/ImportPreviewDialog.tsx`
+
+- بدلاً من جدول كبير، عرض صنف واحد في كل مرة بتصميم مشابه لـ ProductModal
+- عرض index / total (مثل "3 / 15")
+- أزرار: "حفظ والتالي" ← ينتقل للصنف التالي تلقائياً
+- زر "تخطي" للانتقال بدون حفظ
+- زر "حفظ الكل المتبقي" لحفظ البقية دفعة واحدة
+- كل حقل يظهر بنفس ترتيب ProductModal مع ملء تلقائي من البيانات المستوردة
+
+### 3.2 نفس المنطق في المشتريات
+**الملف:** `src/pages/Purchases.tsx`
+
+- إضافة زر "استيراد" في صفحة المشتريات
+- عند رفع ملف، نفس تجربة التعديل صنف بصنف
+- بعد الحفظ، الأصناف تُضاف لفاتورة المشتريات الحالية
+
+---
+
+## 4. أرشفة الأصناف ذات الكمية الصفرية
+
+**الصفحات المتأثرة:** Products (✅ موجود), POS (✅ موجود عبر البحث), InsurancePOS, Purchases
+
+- `Products.tsx`: سطر 50 يخفي الصفرية بالفعل ✅
+- `POS.tsx`: سطر 116 يعرض فقط عند البحث ✅
+- `InsurancePOS.tsx`: يجب إضافة فلتر لإخفاء `stock_quantity === 0`
+- `Purchases.tsx`: الصفرية تظهر في المشتريات وهذا صحيح (لأنك تشتري لتعبئة المخزون)
+
+---
+
+## 5. إخفاء أصناف البيع للتأمين — تظهر فقط عند البحث
+
+**الملف:** `src/pages/InsurancePOS.tsx`
+
+- حالياً `filteredProducts` تُظهر كل الأصناف حتى بدون بحث
+- التعديل: إضافة شرط `searchQuery.length > 0` قبل عرض قائمة الأصناف (مثل POS.tsx سطر 115)
+- إخفاء الأصناف ذات الكمية الصفرية من النتائج
+
+---
+
+## الملفات المتأثرة (ملخص)
+
+| الملف | التغيير |
+|-------|---------|
+| `SidebarContext.tsx` | إضافة `isMobileOpen` + `toggleMobileSidebar` |
+| `Sidebar.tsx` | لف المحتوى بـ Sheet على الموبايل |
+| `Header.tsx` | إضافة زر Hamburger على الموبايل |
+| `MainLayout.tsx` | إزالة margin على الموبايل |
+| `ProductTable.tsx` | إضافة عرض بطاقات على الموبايل |
+| `Accounts.tsx` | بطاقات موبايل للجداول الثلاثة |
+| `Reports.tsx` | بطاقات + grid responsive |
+| `Treasury.tsx` | بطاقات موبايل |
+| `Users.tsx` | بطاقات موبايل |
+| `InsuranceCustomers.tsx` | بطاقات موبايل |
+| `Dashboard.tsx` | grid responsive |
+| `POS.tsx` | تكديس عمودي + أزرار كاملة العرض |
+| `InsurancePOS.tsx` | تكديس + إخفاء أصناف حتى البحث + فلتر صفري |
+| `Purchases.tsx` | تكديس عمودي + استيراد |
+| `Settings.tsx` | grid templates responsive |
+| `PrintSelectDialog.tsx` | ملف جديد — نافذة اختيار أصناف للطباعة |
+| `ImportPreviewDialog.tsx` | إعادة تصميم — تعديل صنف بصنف |
+| `printUtils.ts` | تعديل أعمدة الطباعة |
+| `Products.tsx` | ربط PrintSelectDialog |
 
