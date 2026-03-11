@@ -3,9 +3,11 @@ import { createContext, useContext, useState, useEffect, ReactNode, useCallback 
 interface SidebarContextType {
   collapsed: boolean;
   toggleSidebar: () => void;
+  mobileOpen: boolean;
+  setMobileOpen: (open: boolean) => void;
 }
 
-const SidebarContext = createContext<SidebarContextType>({ collapsed: true, toggleSidebar: () => {} });
+const SidebarContext = createContext<SidebarContextType>({ collapsed: true, toggleSidebar: () => {}, mobileOpen: false, setMobileOpen: () => {} });
 
 export function useSidebarContext() {
   return useContext(SidebarContext);
@@ -13,6 +15,7 @@ export function useSidebarContext() {
 
 export function SidebarProvider({ children }: { children: ReactNode }) {
   const [collapsed, setCollapsed] = useState(true);
+  const [mobileOpen, setMobileOpen] = useState(false);
 
   const toggleSidebar = useCallback(() => setCollapsed(prev => !prev), []);
 
@@ -28,7 +31,7 @@ export function SidebarProvider({ children }: { children: ReactNode }) {
   }, [toggleSidebar]);
 
   return (
-    <SidebarContext.Provider value={{ collapsed, toggleSidebar }}>
+    <SidebarContext.Provider value={{ collapsed, toggleSidebar, mobileOpen, setMobileOpen }}>
       {children}
     </SidebarContext.Provider>
   );

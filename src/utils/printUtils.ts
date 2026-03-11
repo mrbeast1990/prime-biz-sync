@@ -184,20 +184,20 @@ export function printProductsTable(products: any[], settings: PharmacySettings) 
   const rowsHtml = products.map((p, i) => `
     <tr>
       <td>${i + 1}</td>
-      <td>${p.barcode || ''}</td>
+      <td>${p.batch_number || '—'}</td>
       <td>${p.trade_name}</td>
       <td>${p.scientific_name || ''}</td>
       <td>${p.category || ''}</td>
       <td>${p.packaging_type || ''}</td>
       <td>${Number(p.cost_price).toFixed(2)}</td>
-      <td>${Number(p.sale_price).toFixed(2)}</td>
       <td>${p.stock_quantity}</td>
       <td>${p.min_stock}</td>
+      <td>${p.expiry_date ? new Date(p.expiry_date).toLocaleDateString('en-GB') : '—'}</td>
     </tr>`).join('');
 
   const body = `
     <table>
-      <thead><tr><th>#</th><th>الكود</th><th>الاسم التجاري</th><th>الاسم العلمي</th><th>التصنيف</th><th>التعبئة</th><th>التكلفة</th><th>البيع</th><th>المخزون</th><th>الحد الأدنى</th></tr></thead>
+      <thead><tr><th>#</th><th>Batch No</th><th>الاسم التجاري</th><th>الاسم العلمي</th><th>التصنيف</th><th>التعبئة</th><th>التكلفة</th><th>المخزون</th><th>الحد الأدنى</th><th>الصلاحية</th></tr></thead>
       <tbody>${rowsHtml}</tbody>
     </table>
     <div style="margin-top:16px;font-size:14px;font-weight:600">إجمالي الأصناف: ${products.length} | قيمة المخزون: ${products.reduce((s: number, p: any) => s + Number(p.cost_price) * p.stock_quantity, 0).toFixed(2)} د.ل</div>`;

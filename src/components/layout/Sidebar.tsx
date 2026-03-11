@@ -6,6 +6,8 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useSidebarContext } from '@/contexts/SidebarContext';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { Sheet, SheetContent } from '@/components/ui/sheet';
 
 interface NavItem {
   title: string;
@@ -26,16 +28,54 @@ const navItems: NavItem[] = [
   { title: 'لوحة التحكم', href: '/', icon: LayoutDashboard },
 ];
 
-export function Sidebar() {
-  const { collapsed, toggleSidebar } = useSidebarContext();
+function SidebarNav({ onNavClick }: { onNavClick?: () => void }) {
   const location = useLocation();
   const navigate = useNavigate();
   const [focusedIndex, setFocusedIndex] = useState(-1);
   const itemRefs = useRef<(HTMLAnchorElement | null)[]>([]);
 
-  // Keyboard navigation when sidebar is expanded
+  return (
+    <nav className="mt-6 px-3">
+      <ul className="space-y-1">
+        {navItems.map((item, index) => {
+          const isActive = location.pathname === item.href;
+          return (
+            <li key={item.href}>
+              <NavLink
+                to={item.href}
+                ref={el => { itemRefs.current[index] = el; }}
+                onClick={onNavClick}
+                className={cn(
+                  'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200 outline-none',
+                  isActive
+                    ? 'bg-sidebar-primary text-sidebar-primary-foreground shadow-md'
+                    : 'text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground',
+                  focusedIndex === index && !isActive && 'ring-2 ring-sidebar-primary/50'
+                )}
+                onFocus={() => setFocusedIndex(index)}
+              >
+                <item.icon className="h-5 w-5 flex-shrink-0" />
+                <span>{item.title}</span>
+              </NavLink>
+            </li>
+          );
+        })}
+      </ul>
+    </nav>
+  );
+}
+
+export function Sidebar() {
+  const { collapsed, toggleSidebar, mobileOpen, setMobileOpen } = useSidebarContext();
+  const location = useLocation();
+  const navigate = useNavigate();
+  const isMobile = useIsMobile();
+  const [focusedIndex, setFocusedIndex] = useState(-1);
+  const itemRefs = useRef<(HTMLAnchorElement | null)[]>([]);
+
+  // Keyboard navigation when sidebar is expanded (desktop only)
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
-    if (collapsed) return;
+    if (collapsed || isMobile) return;
     if (e.key === 'ArrowDown') {
       e.preventDefault();
       setFocusedIndex(prev => {
@@ -53,15 +93,36 @@ export function Sidebar() {
     } else if (e.key === 'Enter' && focusedIndex >= 0) {
       navigate(navItems[focusedIndex].href);
     }
-  }, [collapsed, focusedIndex, navigate]);
+  }, [collapsed, isMobile, focusedIndex, navigate]);
 
   useEffect(() => {
-    if (!collapsed) {
+    if (!collapsed && !isMobile) {
       window.addEventListener('keydown', handleKeyDown);
       return () => window.removeEventListener('keydown', handleKeyDown);
     }
-  }, [collapsed, handleKeyDown]);
+  }, [collapsed, isMobile, handleKeyDown]);
 
+  // Mobile: use Sheet
+  if (isMobile) {
+    return (
+      <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
+        <SheetContent side="right" className="w-64 p-0 bg-sidebar text-sidebar-foreground border-l border-sidebar-border">
+          <div className="flex h-16 items-center gap-3 border-b border-sidebar-border px-4">
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-sidebar-primary">
+              <ShoppingCart className="h-5 w-5 text-sidebar-primary-foreground" />
+            </div>
+            <div>
+              <h1 className="text-lg font-bold text-sidebar-foreground">نظام المحاسبة</h1>
+              <p className="text-xs text-sidebar-foreground/60">POS Pro</p>
+            </div>
+          </div>
+          <SidebarNav onNavClick={() => setMobileOpen(false)} />
+        </SheetContent>
+      </Sheet>
+    );
+  }
+
+  // Desktop: fixed sidebar
   return (
     <aside
       className={cn(

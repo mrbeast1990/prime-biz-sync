@@ -32,9 +32,7 @@ export default function InsuranceCustomers() {
     try {
       await updateCustomer.mutateAsync({ id: editCustomer.id, ...editForm });
       setEditCustomer(null);
-    } catch {
-      // error handled by mutation
-    }
+    } catch { /* error handled by mutation */ }
   };
 
   const getSalesCount = (customerId: string) => sales.filter((s) => s.customer_id === customerId).length;
@@ -59,7 +57,27 @@ export default function InsuranceCustomers() {
           <Input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="بحث بالاسم أو رقم البطاقة..." className="pr-9" />
         </div>
 
-        <div className="rounded-xl bg-card shadow-card overflow-hidden">
+        {/* Mobile Cards */}
+        <div className="md:hidden space-y-3">
+          {filtered.map((customer) => (
+            <div key={customer.id} className="rounded-xl bg-card p-4 shadow-card">
+              <div className="flex items-center justify-between">
+                <p className="font-medium text-card-foreground">{customer.name}</p>
+                <Button variant="ghost" size="icon" onClick={() => openEdit(customer)}><Edit className="h-4 w-4" /></Button>
+              </div>
+              <div className="mt-2 grid grid-cols-2 gap-2 text-sm">
+                <div><span className="text-muted-foreground text-xs">رقم البطاقة</span><p>{customer.card_number || '—'}</p></div>
+                <div><span className="text-muted-foreground text-xs">الهاتف</span><p dir="ltr" className="text-right">{customer.phone || '—'}</p></div>
+                <div><span className="text-muted-foreground text-xs">العمليات</span><p>{getSalesCount(customer.id)}</p></div>
+                <div><span className="text-muted-foreground text-xs">الإجمالي</span><p className="tabular-nums font-medium">{getTotalSpent(customer.id).toFixed(2)} د.ل</p></div>
+              </div>
+            </div>
+          ))}
+          {filtered.length === 0 && <p className="text-center py-8 text-muted-foreground">لا يوجد عملاء</p>}
+        </div>
+
+        {/* Desktop Table */}
+        <div className="hidden md:block rounded-xl bg-card shadow-card overflow-hidden">
           <Table>
             <TableHeader><TableRow>
               <TableHead className="text-right">الاسم</TableHead><TableHead className="text-right">رقم البطاقة</TableHead><TableHead className="text-right">الهاتف</TableHead>

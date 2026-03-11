@@ -26,7 +26,6 @@ export default function Accounts() {
   const filterContacts = (contacts: Contact[]) =>
     contacts.filter(c => {
       const matchesSearch = c.name.includes(searchQuery) || (c.phone || '').includes(searchQuery);
-      // Hide zero-balance contacts unless searching
       if (!searchQuery && getContactBalance(c.id) === 0) return false;
       return matchesSearch;
     });
@@ -65,6 +64,45 @@ export default function Accounts() {
     return <MainLayout title="الحسابات"><div className="flex items-center justify-center h-64"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div></MainLayout>;
   }
 
+  const ContactCards = ({ contacts, type }: { contacts: Contact[]; type: 'customer' | 'supplier' }) => (
+    <div className="space-y-3 md:hidden">
+      {contacts.map(c => (
+        <div key={c.id} className="rounded-xl bg-card p-4 shadow-card cursor-pointer active:scale-[0.98] transition-transform" onClick={() => openContact(c, type)}>
+          <div className="flex items-center justify-between">
+            <p className="font-medium text-card-foreground">{c.name}</p>
+            {renderBalance(getContactBalance(c.id))}
+          </div>
+          <div className="mt-1 text-sm text-muted-foreground flex gap-3">
+            {c.phone && <span dir="ltr">{c.phone}</span>}
+            {c.address && <span>{c.address}</span>}
+          </div>
+        </div>
+      ))}
+      {contacts.length === 0 && <p className="text-center py-8 text-muted-foreground">لا يوجد بيانات</p>}
+    </div>
+  );
+
+  const InsuranceCards = () => {
+    const list = filterInsurance();
+    return (
+      <div className="space-y-3 md:hidden">
+        {list.map(c => (
+          <div key={c.id} className="rounded-xl bg-card p-4 shadow-card cursor-pointer active:scale-[0.98] transition-transform" onClick={() => openInsurance(c)}>
+            <div className="flex items-center justify-between">
+              <p className="font-medium text-card-foreground">{c.name}</p>
+              <span className="tabular-nums font-medium">{getInsuranceSalesTotal(c.id).toFixed(2)} د.ل</span>
+            </div>
+            <div className="mt-1 text-sm text-muted-foreground flex gap-3">
+              {c.card_number && <span>{c.card_number}</span>}
+              {c.phone && <span dir="ltr">{c.phone}</span>}
+            </div>
+          </div>
+        ))}
+        {list.length === 0 && <p className="text-center py-8 text-muted-foreground">لا يوجد عملاء تأمين</p>}
+      </div>
+    );
+  };
+
   return (
     <MainLayout title="الحسابات">
       <div className="space-y-6">
@@ -81,7 +119,8 @@ export default function Accounts() {
           </TabsList>
 
           <TabsContent value="customers">
-            <div className="rounded-xl bg-card shadow-card overflow-hidden">
+            <ContactCards contacts={filterContacts(customers)} type="customer" />
+            <div className="hidden md:block rounded-xl bg-card shadow-card overflow-hidden">
               <Table>
                 <TableHeader><TableRow>
                   <TableHead className="text-right">الاسم</TableHead><TableHead className="text-right">الهاتف</TableHead><TableHead className="text-right">العنوان</TableHead><TableHead className="text-right">الرصيد</TableHead>
@@ -102,7 +141,8 @@ export default function Accounts() {
           </TabsContent>
 
           <TabsContent value="suppliers">
-            <div className="rounded-xl bg-card shadow-card overflow-hidden">
+            <ContactCards contacts={filterContacts(suppliers)} type="supplier" />
+            <div className="hidden md:block rounded-xl bg-card shadow-card overflow-hidden">
               <Table>
                 <TableHeader><TableRow>
                   <TableHead className="text-right">الاسم</TableHead><TableHead className="text-right">الهاتف</TableHead><TableHead className="text-right">العنوان</TableHead><TableHead className="text-right">الرصيد</TableHead>
@@ -123,7 +163,8 @@ export default function Accounts() {
           </TabsContent>
 
           <TabsContent value="insurance">
-            <div className="rounded-xl bg-card shadow-card overflow-hidden">
+            <InsuranceCards />
+            <div className="hidden md:block rounded-xl bg-card shadow-card overflow-hidden">
               <Table>
                 <TableHeader><TableRow>
                   <TableHead className="text-right">الاسم</TableHead><TableHead className="text-right">رقم البطاقة</TableHead><TableHead className="text-right">الهاتف</TableHead><TableHead className="text-right">إجمالي المبيعات</TableHead>

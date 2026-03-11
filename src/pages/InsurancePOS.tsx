@@ -24,48 +24,34 @@ export default function InsurancePOS() {
   const [showCustomerDialog, setShowCustomerDialog] = useState(false);
   const barcodeRef = useRef<HTMLInputElement>(null);
 
-  // Restore draft on mount
   useEffect(() => {
     try {
       const draft = sessionStorage.getItem(DRAFT_KEY);
-      if (draft) {
-        const parsed = JSON.parse(draft);
-        if (Array.isArray(parsed) && parsed.length > 0) setCart(parsed);
-        sessionStorage.removeItem(DRAFT_KEY);
-      }
+      if (draft) { const parsed = JSON.parse(draft); if (Array.isArray(parsed) && parsed.length > 0) setCart(parsed); sessionStorage.removeItem(DRAFT_KEY); }
     } catch { /* ignore */ }
   }, []);
 
-  // Save draft on unmount
   useEffect(() => {
-    return () => {
-      if (cart.length > 0) {
-        sessionStorage.setItem(DRAFT_KEY, JSON.stringify(cart));
-      }
-    };
+    return () => { if (cart.length > 0) { sessionStorage.setItem(DRAFT_KEY, JSON.stringify(cart)); } };
   }, [cart]);
 
-  const filteredProducts = products.filter(
+  // Only show products when searching + hide zero stock
+  const showProducts = searchQuery.length > 0;
+  const filteredProducts = showProducts ? products.filter(
     (product) =>
-      product.trade_name.includes(searchQuery) ||
+      product.stock_quantity > 0 &&
+      (product.trade_name.includes(searchQuery) ||
       (product.scientific_name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (product.barcode || '').includes(searchQuery)
-  );
+      (product.barcode || '').includes(searchQuery))
+  ) : [];
 
   useEffect(() => { barcodeRef.current?.focus(); }, []);
 
   const addToCart = (product: Product) => {
     const existingItem = cart.find((item) => item.product.id === product.id);
     if (existingItem) {
-      if (existingItem.quantity >= product.stock_quantity) {
-        toast({ title: 'خطأ', description: 'الكمية المطلوبة غير متوفرة في المخزون', variant: 'destructive' });
-        return;
-      }
-      setCart(cart.map((item) =>
-        item.product.id === product.id
-          ? { ...item, quantity: item.quantity + 1, total: (item.quantity + 1) * item.product.sale_price }
-          : item
-      ));
+      if (existingItem.quantity >= product.stock_quantity) { toast({ title: 'خطأ', description: 'الكمية المطلوبة غير متوفرة في المخزون', variant: 'destructive' }); return; }
+      setCart(cart.map((item) => item.product.id === product.id ? { ...item, quantity: item.quantity + 1, total: (item.quantity + 1) * item.product.sale_price } : item));
     } else {
       setCart([...cart, { product, quantity: 1, total: product.sale_price }]);
     }
@@ -84,10 +70,7 @@ export default function InsurancePOS() {
       if (item.product.id === productId) {
         const newQuantity = item.quantity + delta;
         if (newQuantity <= 0) return null;
-        if (newQuantity > item.product.stock_quantity) {
-          toast({ title: 'خطأ', description: 'الكمية المطلوبة غير متوفرة في المخزون', variant: 'destructive' });
-          return item;
-        }
+        if (newQuantity > item.product.stock_quantity) { toast({ title: 'خطأ', description: 'الكمية المطلوبة غير متوفرة في المخزون', variant: 'destructive' }); return item; }
         return { ...item, quantity: newQuantity, total: newQuantity * item.product.sale_price };
       }
       return item;
@@ -106,23 +89,12 @@ export default function InsurancePOS() {
 
   const handleConfirmSale = async (customer: InsuranceCustomer) => {
     try {
-      const saleItems = cart.map(item => ({
-        product_id: item.product.id,
-        product_name: item.product.trade_name,
-        quantity: item.quantity,
-        unit_price: item.product.sale_price,
-        total: item.total,
-      }));
+      const saleItems = cart.map(item => ({ product_id: item.product.id, product_name: item.product.trade_name, quantity: item.quantity, unit_price: item.product.sale_price, total: item.total }));
       await createSale.mutateAsync({ customer_id: customer.id, customer_name: customer.name, total, items: saleItems });
-      for (const item of cart) {
-        await updateStock.mutateAsync({ id: item.product.id, delta: -item.quantity });
-      }
+      for (const item of cart) { await updateStock.mutateAsync({ id: item.product.id, delta: -item.quantity }); }
       toast({ title: 'تم البيع بنجاح', description: `تم تسجيل بيع تأمين بقيمة ${total.toFixed(2)} د.ل للعميل ${customer.name}` });
-      clearCart();
-      setShowCustomerDialog(false);
-    } catch {
-      toast({ title: 'خطأ', description: 'فشل تسجيل البيع', variant: 'destructive' });
-    }
+      clearCart(); setShowCustomerDialog(false);
+    } catch { toast({ title: 'خطأ', description: 'فشل تسجيل البيع', variant: 'destructive' }); }
   };
 
   if (isLoading) {
@@ -131,44 +103,52 @@ export default function InsurancePOS() {
 
   return (
     <MainLayout title="البيع لمستخدمين التأمين">
-      <div className="grid h-[calc(100vh-8rem)] grid-cols-1 gap-6 lg:grid-cols-3">
+      <div className="grid h-[calc(100vh-8rem)] grid-cols-1 gap-4 md:gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2 flex flex-col">
-          <form onSubmit={handleBarcodeSubmit} className="mb-4">
+          <form onSubmit={handleBarcodeSubmit} className="mb-3 md:mb-4">
             <div className="relative">
               <Barcode className="absolute right-3 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
-              <Input ref={barcodeRef} value={barcodeInput} onChange={(e) => setBarcodeInput(e.target.value)} placeholder="امسح الباركود هنا..." className="pr-10 h-12 text-lg font-mono input-focus" />
+              <Input ref={barcodeRef} value={barcodeInput} onChange={(e) => setBarcodeInput(e.target.value)} placeholder="امسح الباركود هنا..." className="pr-10 h-11 md:h-12 text-base md:text-lg font-mono input-focus" />
             </div>
           </form>
-          <div className="relative mb-4">
+          <div className="relative mb-3 md:mb-4">
             <Search className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="بحث عن منتج..." className="pr-9 input-focus" />
           </div>
           <div className="flex-1 overflow-y-auto custom-scrollbar">
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
-              {filteredProducts.map((product) => (
-                <button key={product.id} onClick={() => addToCart(product)} disabled={product.stock_quantity === 0}
-                  className={cn('rounded-lg bg-card p-4 text-right shadow-card transition-all hover:shadow-md hover:scale-[1.02] active:scale-[0.98]', product.stock_quantity === 0 && 'opacity-50 cursor-not-allowed')}>
-                  <p className="font-medium text-card-foreground text-sm leading-tight">{product.trade_name}</p>
-                  <p className="mt-1 text-xs text-muted-foreground leading-tight">{product.scientific_name}</p>
-                  <div className="mt-2 flex items-center justify-between">
-                    <span className="text-lg font-bold text-primary tabular-nums">{product.sale_price.toFixed(2)}</span>
-                    <span className={cn('text-xs font-medium rounded-full px-2 py-0.5', product.stock_quantity <= product.min_stock ? 'bg-destructive/10 text-destructive' : 'bg-success/10 text-success')}>{product.stock_quantity}</span>
-                  </div>
-                </button>
-              ))}
-            </div>
+            {showProducts ? (
+              <div className="grid grid-cols-2 gap-2 md:gap-3 sm:grid-cols-3 md:grid-cols-4">
+                {filteredProducts.map((product) => (
+                  <button key={product.id} onClick={() => addToCart(product)} disabled={product.stock_quantity === 0}
+                    className={cn('rounded-lg bg-card p-3 md:p-4 text-right shadow-card transition-all hover:shadow-md hover:scale-[1.02] active:scale-[0.98]', product.stock_quantity === 0 && 'opacity-50 cursor-not-allowed')}>
+                    <p className="font-medium text-card-foreground text-sm leading-tight">{product.trade_name}</p>
+                    <p className="mt-1 text-xs text-muted-foreground leading-tight">{product.scientific_name}</p>
+                    <div className="mt-2 flex items-center justify-between">
+                      <span className="text-base md:text-lg font-bold text-primary tabular-nums">{product.sale_price.toFixed(2)}</span>
+                      <span className={cn('text-xs font-medium rounded-full px-2 py-0.5', product.stock_quantity <= product.min_stock ? 'bg-destructive/10 text-destructive' : 'bg-success/10 text-success')}>{product.stock_quantity}</span>
+                    </div>
+                  </button>
+                ))}
+                {filteredProducts.length === 0 && <div className="col-span-full text-center py-8 text-muted-foreground text-sm">لا توجد نتائج</div>}
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground">
+                <Search className="h-10 w-10 mb-2 opacity-30" />
+                <p className="text-sm">ابحث عن صنف بالاسم أو الباركود</p>
+              </div>
+            )}
           </div>
         </div>
 
         <div className="flex flex-col rounded-xl bg-card shadow-card">
-          <div className="flex items-center justify-between border-b border-border p-4">
+          <div className="flex items-center justify-between border-b border-border p-3 md:p-4">
             <div className="flex items-center gap-3">
               <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10"><Shield className="h-5 w-5 text-primary" /></div>
               <div><h2 className="font-semibold text-card-foreground">إصدار فاتورة</h2><p className="text-sm text-muted-foreground">{itemCount} منتج</p></div>
             </div>
             {cart.length > 0 && <Button variant="ghost" size="icon" onClick={clearCart}><X className="h-4 w-4" /></Button>}
           </div>
-          <div className="flex-1 overflow-y-auto custom-scrollbar p-4">
+          <div className="flex-1 overflow-y-auto custom-scrollbar p-3 md:p-4">
             {cart.length === 0 ? (
               <div className="flex h-full flex-col items-center justify-center text-center">
                 <ShoppingCart className="h-12 w-12 text-muted-foreground/50" />
@@ -180,17 +160,14 @@ export default function InsurancePOS() {
                 {cart.map((item) => (
                   <div key={item.product.id} className="rounded-lg bg-muted/50 p-3">
                     <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <p className="font-medium text-card-foreground">{item.product.trade_name}</p>
-                        <p className="text-sm text-muted-foreground">{item.product.sale_price.toFixed(2)} د.ل</p>
-                      </div>
+                      <div className="flex-1"><p className="font-medium text-card-foreground">{item.product.trade_name}</p><p className="text-sm text-muted-foreground">{item.product.sale_price.toFixed(2)} د.ل</p></div>
                       <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive hover:text-destructive" onClick={() => removeFromCart(item.product.id)}><Trash2 className="h-3 w-3" /></Button>
                     </div>
                     <div className="mt-2 flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => updateQuantity(item.product.id, -1)}><Minus className="h-3 w-3" /></Button>
+                        <Button variant="outline" size="icon" className="h-8 w-8 md:h-7 md:w-7" onClick={() => updateQuantity(item.product.id, -1)}><Minus className="h-3 w-3" /></Button>
                         <span className="w-8 text-center font-medium tabular-nums">{item.quantity}</span>
-                        <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => updateQuantity(item.product.id, 1)}><Plus className="h-3 w-3" /></Button>
+                        <Button variant="outline" size="icon" className="h-8 w-8 md:h-7 md:w-7" onClick={() => updateQuantity(item.product.id, 1)}><Plus className="h-3 w-3" /></Button>
                       </div>
                       <p className="font-bold text-card-foreground tabular-nums">{item.total.toFixed(2)} د.ل</p>
                     </div>
@@ -199,15 +176,15 @@ export default function InsurancePOS() {
               </div>
             )}
           </div>
-          <div className="border-t border-border p-4 space-y-3">
+          <div className="border-t border-border p-3 md:p-4 space-y-3">
             <div className="flex gap-3">
-              <div className="rounded-lg border border-border px-4 py-3 flex flex-col items-center justify-center min-w-[5rem]">
+              <div className="rounded-lg border border-border px-3 md:px-4 py-3 flex flex-col items-center justify-center min-w-[4rem] md:min-w-[5rem]">
                 <Banknote className="h-5 w-5 text-primary" />
                 <span className="text-xs font-medium text-card-foreground mt-1">نقدي</span>
               </div>
               <div className="flex-1 rounded-lg bg-primary/10 p-3 flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">الإجمالي</span>
-                <span className="text-4xl font-bold text-primary tabular-nums">{total.toFixed(2)} د.ل</span>
+                <span className="text-2xl md:text-4xl font-bold text-primary tabular-nums">{total.toFixed(2)} د.ل</span>
               </div>
             </div>
             <Button size="lg" className="w-full gap-2" onClick={handleSell} disabled={createSale.isPending}>
