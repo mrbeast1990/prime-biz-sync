@@ -26,6 +26,8 @@ export function Header({ title }: HeaderProps) {
   const navigate = useNavigate();
   const [displayName, setDisplayName] = useState('المستخدم');
   const [loggingOut, setLoggingOut] = useState(false);
+  const { setMobileOpen } = useSidebarContext();
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
