@@ -17,7 +17,7 @@ import {
 interface ProductModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (product: Partial<Product>) => void;
+  onSave: (product: Partial<Product>) => Promise<boolean | void>;
   product?: Product | null;
 }
 
