@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Bell, Search, User, LogOut, Loader2 } from 'lucide-react';
+import { Bell, Search, User, LogOut, Loader2, Menu } from 'lucide-react';
+import { useSidebarContext } from '@/contexts/SidebarContext';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { toast } from '@/hooks/use-toast';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
