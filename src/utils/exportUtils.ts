@@ -4,13 +4,13 @@ export function exportToCSV(data: Record<string, any>[], filename: string) {
   if (data.length === 0) return;
   const headers = Object.keys(data[0]);
   const csvContent = [
-    headers.join(','),
-    ...data.map(row => headers.map(h => `"${String(row[h] ?? '').replace(/"/g, '""')}"`).join(','))
+    headers.join('\t'),
+    ...data.map(row => headers.map(h => String(row[h] ?? '').replace(/\t/g, ' ')).join('\t'))
   ].join('\n');
-  const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+  const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/tab-separated-values;charset=utf-8;' });
   const link = document.createElement('a');
   link.href = URL.createObjectURL(blob);
-  link.download = `${filename}.csv`;
+  link.download = `${filename}.xls`;
   link.click();
   URL.revokeObjectURL(link.href);
 }

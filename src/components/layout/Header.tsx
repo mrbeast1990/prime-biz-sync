@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Bell, Search, User, LogOut, Loader2 } from 'lucide-react';
+import { Bell, Search, User, LogOut, Loader2, Menu } from 'lucide-react';
+import { useSidebarContext } from '@/contexts/SidebarContext';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { toast } from '@/hooks/use-toast';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -24,6 +26,8 @@ export function Header({ title }: HeaderProps) {
   const navigate = useNavigate();
   const [displayName, setDisplayName] = useState('المستخدم');
   const [loggingOut, setLoggingOut] = useState(false);
+  const { setMobileOpen } = useSidebarContext();
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
@@ -46,8 +50,15 @@ export function Header({ title }: HeaderProps) {
   };
 
   return (
-    <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-border bg-card px-6 shadow-sm">
-      <h1 className="text-xl font-bold text-foreground">{title}</h1>
+    <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-border bg-card px-4 md:px-6 shadow-sm">
+      <div className="flex items-center gap-3">
+        {isMobile && (
+          <Button variant="ghost" size="icon" onClick={() => setMobileOpen(true)}>
+            <Menu className="h-5 w-5" />
+          </Button>
+        )}
+        <h1 className="text-lg md:text-xl font-bold text-foreground">{title}</h1>
+      </div>
 
       <div className="flex items-center gap-4">
         <div className="relative hidden md:block">

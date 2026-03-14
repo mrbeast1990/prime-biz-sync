@@ -78,12 +78,13 @@ export default function Purchases() {
   // Auto-focus search field
   useEffect(() => { searchRef.current?.focus(); }, []);
 
-  const filteredProducts = products.filter(
+  const showProducts = searchQuery.length > 0;
+  const filteredProducts = showProducts ? products.filter(
     (p) =>
       p.trade_name.includes(searchQuery) ||
       (p.scientific_name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
       (p.barcode || '').includes(searchQuery)
-  );
+  ) : [];
 
   const addProduct = (product: Product) => {
     const existing = items.find((i) => i.product_id === product.id);
