@@ -293,7 +293,7 @@ export function ProductModal({ isOpen, onClose, onSave, product }: ProductModalP
               </select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="units_per_package">عدد الوحدات في العبوة</Label>
+              <Label htmlFor="units_per_package">{formData.packaging_type === 'علبة' ? 'عدد الأشرطة' : 'عدد الوحدات في العبوة'}</Label>
               <Input id="units_per_package" ref={setRef(5)} type="number" min="1"
                 value={formData.units_per_package}
                 onChange={(e) => setFormData({ ...formData, units_per_package: Number(e.target.value) })}
