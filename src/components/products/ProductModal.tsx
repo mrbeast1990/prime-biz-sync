@@ -173,7 +173,20 @@ export function ProductModal({ isOpen, onClose, onSave, product }: ProductModalP
         setChecking(false);
         return;
       }
-      onSave(formData);
+      const result = await onSave(formData);
+      // If adding new product (not editing), reset form for next entry
+      if (!product && result !== false) {
+        setFormData({
+          barcode: generateCode(), trade_name: '', scientific_name: '', category: '',
+          packaging_type: 'علبة', units_per_package: 1, has_expiry: true,
+          image_url: '', stock_quantity: 0, min_stock: 0, cost_price: 0, sale_price: 0,
+          batch_number: '',
+        });
+        setSuggestions([]);
+        setShowSuggestions(false);
+        // Focus trade_name field for quick next entry
+        setTimeout(() => fieldRefs.current[1]?.focus(), 100);
+      }
     } catch {
       toast({ title: 'خطأ', description: 'فشل التحقق من الاسم', variant: 'destructive' });
     } finally {

@@ -70,7 +70,9 @@ function getTemplateColors(template?: string) {
 
 function buildPage(settings: PharmacySettings, title: string, body: string) {
   const colors = getTemplateColors(settings.invoiceTemplate);
-  const logoHtml = settings.logo ? `<img src="${settings.logo}" alt="logo" style="height:120px;max-width:300px;object-fit:contain;margin:0 auto 12px;display:block" />` : '';
+  const pharmacyLogo = settings.logo ? `<img src="${settings.logo}" alt="logo" style="height:80px;max-width:200px;object-fit:contain" />` : `<div style="font-size:20px;font-weight:700;color:${colors.primary}">${settings.name}</div>`;
+  const phifLogo = `<img src="/phif-logo.png" alt="PHIF" style="height:80px;max-width:200px;object-fit:contain" />`;
+  
   return `<!DOCTYPE html>
 <html dir="rtl" lang="ar">
 <head>
@@ -80,9 +82,10 @@ function buildPage(settings: PharmacySettings, title: string, body: string) {
 @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap');
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:'Cairo',sans-serif;padding:20px;color:#1a1a1a;background:#fff}
-.header{text-align:center;border-bottom:2px solid ${colors.primary};padding-bottom:16px;margin-bottom:20px}
-.pharmacy-name{font-size:24px;font-weight:700;color:${colors.primary}}
-.doc-title{font-size:18px;font-weight:600;margin-top:4px;color:#374151}
+.header{display:flex;align-items:center;justify-content:space-between;border-bottom:2px solid ${colors.primary};padding-bottom:16px;margin-bottom:20px}
+.header-center{text-align:center;flex:1}
+.pharmacy-name{font-size:22px;font-weight:700;color:${colors.primary}}
+.doc-title{font-size:16px;font-weight:600;margin-top:4px;color:#374151}
 .info-row{display:flex;justify-content:space-between;margin-bottom:12px;font-size:14px}
 .info-label{color:#6b7280;font-weight:600}
 table{width:100%;border-collapse:collapse;margin:16px 0}
@@ -99,9 +102,12 @@ tr:nth-child(even){background:#f9fafb}
 </head>
 <body>
 <div class="header">
-  ${logoHtml}
-  <div class="pharmacy-name">${settings.name}</div>
-  <div class="doc-title">${title}</div>
+  <div style="text-align:right">${pharmacyLogo}</div>
+  <div class="header-center">
+    <div class="pharmacy-name">${settings.name}</div>
+    <div class="doc-title">${title}</div>
+  </div>
+  <div style="text-align:left">${phifLogo}</div>
 </div>
 ${body}
 <div class="footer">
@@ -180,24 +186,46 @@ export function printAccountStatement(data: AccountStatementData, settings: Phar
   openPrintWindow(buildPage(settings, 'كشف حساب', body));
 }
 
-export function printProductsTable(products: any[], settings: PharmacySettings) {
-  const rowsHtml = products.map((p, i) => `
-    <tr>
-      <td>${i + 1}</td>
-      <td>${p.batch_number || '—'}</td>
-      <td>${p.trade_name}</td>
-      <td>${p.scientific_name || ''}</td>
-      <td>${p.category || ''}</td>
-      <td>${p.packaging_type || ''}</td>
-      <td>${Number(p.cost_price).toFixed(2)}</td>
-      <td>${p.stock_quantity}</td>
-      <td>${p.min_stock}</td>
-      <td>${p.expiry_date ? new Date(p.expiry_date).toLocaleDateString('en-GB') : '—'}</td>
-    </tr>`).join('');
+const COLUMN_LABELS: Record<string, string> = {
+  batch_number: 'Batch No',
+  trade_name: 'الاسم التجاري',
+  scientific_name: 'الاسم العلمي',
+  category: 'التصنيف',
+  packaging_type: 'التعبئة',
+  cost_price: 'التكلفة',
+  sale_price: 'سعر البيع',
+  stock_quantity: 'المخزون',
+  min_stock: 'الحد الأدنى',
+  expiry_date: 'الصلاحية',
+};
+
+function getColumnValue(p: any, key: string): string {
+  switch (key) {
+    case 'batch_number': return p.batch_number || '—';
+    case 'trade_name': return p.trade_name;
+    case 'scientific_name': return p.scientific_name || '';
+    case 'category': return p.category || '';
+    case 'packaging_type': return p.packaging_type || '';
+    case 'cost_price': return Number(p.cost_price).toFixed(2);
+    case 'sale_price': return Number(p.sale_price).toFixed(2);
+    case 'stock_quantity': return String(p.stock_quantity);
+    case 'min_stock': return String(p.min_stock);
+    case 'expiry_date': return p.expiry_date ? new Date(p.expiry_date).toLocaleDateString('en-GB') : '—';
+    default: return '';
+  }
+}
+
+export function printProductsTable(products: any[], settings: PharmacySettings, columns?: string[]) {
+  const cols = columns || ['batch_number', 'trade_name', 'scientific_name', 'category', 'packaging_type', 'cost_price', 'stock_quantity', 'min_stock', 'expiry_date'];
+  
+  const headerHtml = `<th>#</th>` + cols.map(c => `<th>${COLUMN_LABELS[c] || c}</th>`).join('');
+  const rowsHtml = products.map((p, i) => 
+    `<tr><td>${i + 1}</td>${cols.map(c => `<td>${getColumnValue(p, c)}</td>`).join('')}</tr>`
+  ).join('');
 
   const body = `
     <table>
-      <thead><tr><th>#</th><th>Batch No</th><th>الاسم التجاري</th><th>الاسم العلمي</th><th>التصنيف</th><th>التعبئة</th><th>التكلفة</th><th>المخزون</th><th>الحد الأدنى</th><th>الصلاحية</th></tr></thead>
+      <thead><tr>${headerHtml}</tr></thead>
       <tbody>${rowsHtml}</tbody>
     </table>
     <div style="margin-top:16px;font-size:14px;font-weight:600">إجمالي الأصناف: ${products.length} | قيمة المخزون: ${products.reduce((s: number, p: any) => s + Number(p.cost_price) * p.stock_quantity, 0).toFixed(2)} د.ل</div>`;

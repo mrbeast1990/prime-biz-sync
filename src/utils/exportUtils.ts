@@ -3,14 +3,24 @@ import { Product } from '@/types';
 export function exportToCSV(data: Record<string, any>[], filename: string) {
   if (data.length === 0) return;
   const headers = Object.keys(data[0]);
+  
+  const escapeField = (val: string) => {
+    const s = String(val ?? '');
+    if (s.includes(',') || s.includes('"') || s.includes('\n')) {
+      return `"${s.replace(/"/g, '""')}"`;
+    }
+    return s;
+  };
+
   const csvContent = [
-    headers.join('\t'),
-    ...data.map(row => headers.map(h => String(row[h] ?? '').replace(/\t/g, ' ')).join('\t'))
-  ].join('\n');
-  const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/tab-separated-values;charset=utf-8;' });
+    headers.map(escapeField).join(','),
+    ...data.map(row => headers.map(h => escapeField(String(row[h] ?? ''))).join(','))
+  ].join('\r\n');
+
+  const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
   const link = document.createElement('a');
   link.href = URL.createObjectURL(blob);
-  link.download = `${filename}.xls`;
+  link.download = `${filename}.csv`;
   link.click();
   URL.revokeObjectURL(link.href);
 }
@@ -68,7 +78,6 @@ const HEADER_MAP: Record<string, string> = {
   'المخزون': 'stock_quantity',
   'الحد الأدنى': 'min_stock',
   'خاضع للصلاحية': 'has_expiry',
-  // English alternatives
   'barcode': 'barcode',
   'trade_name': 'trade_name',
   'scientific_name': 'scientific_name',
@@ -83,7 +92,6 @@ const HEADER_MAP: Record<string, string> = {
 };
 
 export function parseCSV(text: string): Record<string, string>[] {
-  // Remove BOM
   const clean = text.replace(/^\uFEFF/, '');
   const lines = clean.split(/\r?\n/).filter(l => l.trim());
   if (lines.length < 2) return [];
@@ -119,7 +127,7 @@ function parseCSVLine(line: string): string[] {
     } else {
       if (ch === '"') {
         inQuotes = true;
-      } else if (ch === ',') {
+      } else if (ch === ',' || ch === '\t') {
         result.push(current);
         current = '';
       } else {
