@@ -17,13 +17,14 @@ import {
 interface ProductModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (product: Partial<Product>) => void;
+  onSave: (product: Partial<Product>) => Promise<boolean | void>;
   product?: Product | null;
 }
 
 const defaultCategories = [
   'مسكنات', 'مضادات حيوية', 'مسكنات موضعية', 'مضادات الحساسية',
-  'أدوية الجهاز الهضمي', 'فيتامينات', 'أدوية القلب', 'أدوية السكري',
+  'أدوية الجهاز الهضمي', 'فيتامينات', 'الضغط و القلب', 'غدد و سكري',
+  'قطرات عين', 'دهون', 'سيولة دم',
 ];
 
 const CATEGORIES_STORAGE_KEY = 'product_categories';
@@ -172,7 +173,20 @@ export function ProductModal({ isOpen, onClose, onSave, product }: ProductModalP
         setChecking(false);
         return;
       }
-      onSave(formData);
+      const result = await onSave(formData);
+      // If adding new product (not editing), reset form for next entry
+      if (!product && result !== false) {
+        setFormData({
+          barcode: generateCode(), trade_name: '', scientific_name: '', category: '',
+          packaging_type: 'علبة', units_per_package: 1, has_expiry: true,
+          image_url: '', stock_quantity: 0, min_stock: 0, cost_price: 0, sale_price: 0,
+          batch_number: '',
+        });
+        setSuggestions([]);
+        setShowSuggestions(false);
+        // Focus trade_name field for quick next entry
+        setTimeout(() => fieldRefs.current[1]?.focus(), 100);
+      }
     } catch {
       toast({ title: 'خطأ', description: 'فشل التحقق من الاسم', variant: 'destructive' });
     } finally {
@@ -292,7 +306,7 @@ export function ProductModal({ isOpen, onClose, onSave, product }: ProductModalP
               </select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="units_per_package">عدد الوحدات في العبوة</Label>
+              <Label htmlFor="units_per_package">{formData.packaging_type === 'علبة' ? 'عدد الأشرطة' : 'عدد الوحدات في العبوة'}</Label>
               <Input id="units_per_package" ref={setRef(5)} type="number" min="1"
                 value={formData.units_per_package}
                 onChange={(e) => setFormData({ ...formData, units_per_package: Number(e.target.value) })}

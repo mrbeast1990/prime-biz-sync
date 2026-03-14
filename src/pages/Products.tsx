@@ -51,13 +51,23 @@ export default function Products() {
     }
   };
 
-  const handleSave = async (productData: Partial<Product>) => {
+  const handleSave = async (productData: Partial<Product>): Promise<boolean | void> => {
     try {
-      if (selectedProduct) { await updateProduct.mutateAsync({ id: selectedProduct.id, ...productData }); toast({ title: 'تم التحديث', description: 'تم تحديث بيانات الصنف بنجاح' }); }
-      else { await createProduct.mutateAsync(productData); toast({ title: 'تمت الإضافة', description: 'تم إضافة الصنف الجديد بنجاح' }); }
-      setIsModalOpen(false); setSelectedProduct(null);
-      if (searchParams.get('returnTo') === 'purchases') { navigate('/purchases?restore=true'); }
-    } catch { toast({ title: 'خطأ', description: 'فشل حفظ الصنف', variant: 'destructive' }); }
+      if (selectedProduct) {
+        await updateProduct.mutateAsync({ id: selectedProduct.id, ...productData });
+        toast({ title: 'تم التحديث', description: 'تم تحديث بيانات الصنف بنجاح' });
+        setIsModalOpen(false); setSelectedProduct(null);
+      } else {
+        await createProduct.mutateAsync(productData);
+        toast({ title: 'تمت الإضافة ✓', description: 'تم إضافة الصنف — أدخل الصنف التالي' });
+        // Don't close modal for new products — let user keep adding
+      }
+      if (searchParams.get('returnTo') === 'purchases') { setIsModalOpen(false); navigate('/purchases?restore=true'); }
+      return true;
+    } catch {
+      toast({ title: 'خطأ', description: 'فشل حفظ الصنف', variant: 'destructive' });
+      return false;
+    }
   };
 
   const handleAddNew = () => { setSelectedProduct(null); setIsModalOpen(true); };

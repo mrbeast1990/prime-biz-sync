@@ -9,6 +9,21 @@ import { Product } from '@/types';
 import { PharmacySettings } from '@/types';
 import { printProductsTable } from '@/utils/printUtils';
 
+const ALL_COLUMNS = [
+  { key: 'batch_number', label: 'Batch No' },
+  { key: 'trade_name', label: 'الاسم التجاري' },
+  { key: 'scientific_name', label: 'الاسم العلمي' },
+  { key: 'category', label: 'التصنيف' },
+  { key: 'packaging_type', label: 'التعبئة' },
+  { key: 'cost_price', label: 'التكلفة' },
+  { key: 'sale_price', label: 'سعر البيع' },
+  { key: 'stock_quantity', label: 'المخزون' },
+  { key: 'min_stock', label: 'الحد الأدنى' },
+  { key: 'expiry_date', label: 'الصلاحية' },
+] as const;
+
+const DEFAULT_COLUMNS = new Set(['batch_number', 'trade_name', 'scientific_name', 'category', 'packaging_type', 'cost_price', 'stock_quantity', 'min_stock', 'expiry_date']);
+
 interface PrintSelectDialogProps {
   isOpen: boolean;
   onClose: () => void;
@@ -18,6 +33,7 @@ interface PrintSelectDialogProps {
 
 export function PrintSelectDialog({ isOpen, onClose, products, settings }: PrintSelectDialogProps) {
   const [selected, setSelected] = useState<Set<string>>(new Set(products.map(p => p.id)));
+  const [selectedColumns, setSelectedColumns] = useState<Set<string>>(new Set(DEFAULT_COLUMNS));
   const [searchQuery, setSearchQuery] = useState('');
 
   const filtered = products.filter(p =>
@@ -29,11 +45,8 @@ export function PrintSelectDialog({ isOpen, onClose, products, settings }: Print
   const allSelected = selected.size === products.length;
 
   const toggleAll = () => {
-    if (allSelected) {
-      setSelected(new Set());
-    } else {
-      setSelected(new Set(products.map(p => p.id)));
-    }
+    if (allSelected) setSelected(new Set());
+    else setSelected(new Set(products.map(p => p.id)));
   };
 
   const toggle = (id: string) => {
@@ -43,18 +56,39 @@ export function PrintSelectDialog({ isOpen, onClose, products, settings }: Print
     setSelected(next);
   };
 
+  const toggleColumn = (key: string) => {
+    const next = new Set(selectedColumns);
+    if (next.has(key)) next.delete(key);
+    else next.add(key);
+    setSelectedColumns(next);
+  };
+
   const handlePrint = () => {
     const toPrint = products.filter(p => selected.has(p.id));
-    printProductsTable(toPrint, settings);
+    const columns = ALL_COLUMNS.filter(c => selectedColumns.has(c.key)).map(c => c.key);
+    printProductsTable(toPrint, settings, columns);
     onClose();
   };
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-lg max-h-[80vh] flex flex-col">
+      <DialogContent className="max-w-lg max-h-[85vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>اختيار أصناف للطباعة</DialogTitle>
         </DialogHeader>
+
+        {/* Column selection */}
+        <div className="mb-3">
+          <p className="text-sm font-medium mb-2 text-muted-foreground">الأعمدة المعروضة:</p>
+          <div className="flex flex-wrap gap-2">
+            {ALL_COLUMNS.map(col => (
+              <label key={col.key} className="flex items-center gap-1.5 text-xs cursor-pointer rounded-full border px-2.5 py-1 hover:bg-muted/50 transition-colors">
+                <Checkbox checked={selectedColumns.has(col.key)} onCheckedChange={() => toggleColumn(col.key)} className="h-3.5 w-3.5" />
+                {col.label}
+              </label>
+            ))}
+          </div>
+        </div>
 
         <div className="relative mb-3">
           <Search className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -86,7 +120,7 @@ export function PrintSelectDialog({ isOpen, onClose, products, settings }: Print
 
         <div className="flex items-center justify-between pt-3 border-t">
           <Button variant="outline" onClick={onClose}>إلغاء</Button>
-          <Button onClick={handlePrint} disabled={selected.size === 0} className="gap-2">
+          <Button onClick={handlePrint} disabled={selected.size === 0 || selectedColumns.size === 0} className="gap-2">
             <Printer className="h-4 w-4" />
             طباعة {selected.size} صنف
           </Button>
