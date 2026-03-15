@@ -418,6 +418,10 @@ export function AccountDetailsDialog({ isOpen, onClose, contact, insuranceCustom
                                     <Edit className={cn("h-3 w-3", isEditingThis && "text-primary")} />
                                   </Button>
                                 )}
+                                <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive" title="حذف"
+                                  onClick={() => handleDeleteTransaction(t)}>
+                                  <Trash2 className="h-3 w-3" />
+                                </Button>
                                 {type === 'supplier' && !isPaid && (
                                   <Button variant="outline" size="sm" className="h-6 text-[10px] gap-1 px-2"
                                     onClick={() => openPayment(t.id)}>

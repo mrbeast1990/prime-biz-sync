@@ -240,6 +240,20 @@ export default function Purchases() {
     setShowSupplierModal(false);
   };
 
+  const handleDeleteInvoice = async (invoiceId: string) => {
+    if (!window.confirm('هل أنت متأكد من حذف هذه الفاتورة؟')) return;
+    try {
+      await supabase.from('invoice_items').delete().eq('invoice_id', invoiceId);
+      await supabase.from('product_batches').delete().eq('invoice_id', invoiceId);
+      await supabase.from('invoices').delete().eq('id', invoiceId);
+      queryClient.invalidateQueries({ queryKey: ['invoices'] });
+      queryClient.invalidateQueries({ queryKey: ['products'] });
+      toast({ title: 'تم الحذف', description: 'تم حذف الفاتورة بنجاح' });
+    } catch {
+      toast({ title: 'خطأ', description: 'فشل حذف الفاتورة', variant: 'destructive' });
+    }
+  };
+
   const handleExportCSV = () => {
     exportToCSV(purchaseInvoices.map(inv => ({
       'رقم الفاتورة': inv.invoice_number || '—',
