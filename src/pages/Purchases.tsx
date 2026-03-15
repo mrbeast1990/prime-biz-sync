@@ -324,8 +324,8 @@ export default function Purchases() {
                     <span className="text-3xl font-bold text-primary tabular-nums">{total.toFixed(2)} د.ل</span>
                   </div>
                 </div>
-                <Button size="lg" className="w-full gap-2" onClick={handleSave} disabled={createInvoice.isPending}>
-                  {createInvoice.isPending ? <Loader2 className="h-5 w-5 animate-spin" /> : <><Save className="h-5 w-5" />حفظ فاتورة المشتريات</>}
+                <Button size="lg" className="w-full gap-2" onClick={handleSave} disabled={isSaving || createInvoice.isPending}>
+                  {(isSaving || createInvoice.isPending) ? <Loader2 className="h-5 w-5 animate-spin" /> : <><Save className="h-5 w-5" />حفظ فاتورة المشتريات</>}
                 </Button>
               </div>
             </div>
