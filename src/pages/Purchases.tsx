@@ -149,12 +149,16 @@ export default function Purchases() {
   const removeItem = (itemId: string) => setItems(items.filter((i) => i.id !== itemId));
   const total = items.reduce((sum, i) => sum + i.total, 0);
 
+  const [isSaving, setIsSaving] = useState(false);
+
   const handleSave = async () => {
+    if (isSaving) return;
     if (!selectedSupplier) { toast({ title: 'خطأ', description: 'اختر المورد أولاً', variant: 'destructive' }); return; }
     if (!invoiceNumber.trim()) { toast({ title: 'خطأ', description: 'أدخل رقم فاتورة المورد', variant: 'destructive' }); return; }
     if (items.length === 0) { toast({ title: 'خطأ', description: 'أضف أصنافاً أولاً', variant: 'destructive' }); return; }
     const missingExpiry = items.find(i => i.has_expiry && !i.expiry_date);
     if (missingExpiry) { toast({ title: 'خطأ', description: `أدخل تاريخ الصلاحية لـ ${missingExpiry.product_name}`, variant: 'destructive' }); return; }
+    setIsSaving(true);
 
     try {
       const { data: { user } } = await supabase.auth.getUser();
