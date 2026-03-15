@@ -7,7 +7,7 @@ import {
 import { cn } from '@/lib/utils';
 import { useSidebarContext } from '@/contexts/SidebarContext';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { Sheet, SheetContent } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 
 interface NavItem {
   title: string;
