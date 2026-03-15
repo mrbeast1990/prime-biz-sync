@@ -7,7 +7,7 @@ import {
 import { cn } from '@/lib/utils';
 import { useSidebarContext } from '@/contexts/SidebarContext';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { Sheet, SheetContent } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 
 interface NavItem {
   title: string;
@@ -107,6 +107,8 @@ export function Sidebar() {
     return (
       <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
         <SheetContent side="right" className="w-64 p-0 bg-sidebar text-sidebar-foreground border-l border-sidebar-border">
+          <SheetTitle className="sr-only">قائمة التنقل</SheetTitle>
+          <SheetDescription className="sr-only">اختر الصفحة التي تريد الانتقال إليها</SheetDescription>
           <div className="flex h-16 items-center gap-3 border-b border-sidebar-border px-4">
             <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-sidebar-primary">
               <ShoppingCart className="h-5 w-5 text-sidebar-primary-foreground" />
