@@ -230,6 +230,8 @@ export default function Purchases() {
       setInvoiceNumber('');
     } catch {
       toast({ title: 'خطأ', description: 'فشل حفظ الفاتورة', variant: 'destructive' });
+    } finally {
+      setIsSaving(false);
     }
   };
 
