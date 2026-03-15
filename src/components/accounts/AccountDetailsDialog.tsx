@@ -209,6 +209,23 @@ export function AccountDetailsDialog({ isOpen, onClose, contact, insuranceCustom
     }
   };
 
+  const handleDeleteTransaction = async (t: any) => {
+    if (!window.confirm('هل أنت متأكد من حذف هذه العملية؟')) return;
+    try {
+      if (type === 'insurance') {
+        await supabase.from('insurance_sale_items').delete().eq('sale_id', t.id);
+        await supabase.from('insurance_sales').delete().eq('id', t.id);
+      } else {
+        await supabase.from('invoice_items').delete().eq('invoice_id', t.id);
+        await supabase.from('product_batches').delete().eq('invoice_id', t.id);
+        await supabase.from('invoices').delete().eq('id', t.id);
+      }
+      toast({ title: 'تم الحذف', description: 'تم حذف العملية بنجاح' });
+    } catch {
+      toast({ title: 'خطأ', description: 'فشل حذف العملية', variant: 'destructive' });
+    }
+  };
+
   const handleCancelPayment = async (t: any) => {
     if (!window.confirm('هل أنت متأكد من إلغاء السداد لهذه الفاتورة؟ سيتم إرجاع المبلغ المسدد إلى صفر.')) return;
     try {
