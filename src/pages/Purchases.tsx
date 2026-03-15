@@ -149,12 +149,16 @@ export default function Purchases() {
   const removeItem = (itemId: string) => setItems(items.filter((i) => i.id !== itemId));
   const total = items.reduce((sum, i) => sum + i.total, 0);
 
+  const [isSaving, setIsSaving] = useState(false);
+
   const handleSave = async () => {
+    if (isSaving) return;
     if (!selectedSupplier) { toast({ title: 'خطأ', description: 'اختر المورد أولاً', variant: 'destructive' }); return; }
     if (!invoiceNumber.trim()) { toast({ title: 'خطأ', description: 'أدخل رقم فاتورة المورد', variant: 'destructive' }); return; }
     if (items.length === 0) { toast({ title: 'خطأ', description: 'أضف أصنافاً أولاً', variant: 'destructive' }); return; }
     const missingExpiry = items.find(i => i.has_expiry && !i.expiry_date);
     if (missingExpiry) { toast({ title: 'خطأ', description: `أدخل تاريخ الصلاحية لـ ${missingExpiry.product_name}`, variant: 'destructive' }); return; }
+    setIsSaving(true);
 
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -226,12 +230,28 @@ export default function Purchases() {
       setInvoiceNumber('');
     } catch {
       toast({ title: 'خطأ', description: 'فشل حفظ الفاتورة', variant: 'destructive' });
+    } finally {
+      setIsSaving(false);
     }
   };
 
   const handleSupplierSave = (supplier: Contact) => {
     setSelectedSupplier(supplier);
     setShowSupplierModal(false);
+  };
+
+  const handleDeleteInvoice = async (invoiceId: string) => {
+    if (!window.confirm('هل أنت متأكد من حذف هذه الفاتورة؟')) return;
+    try {
+      await supabase.from('invoice_items').delete().eq('invoice_id', invoiceId);
+      await supabase.from('product_batches').delete().eq('invoice_id', invoiceId);
+      await supabase.from('invoices').delete().eq('id', invoiceId);
+      queryClient.invalidateQueries({ queryKey: ['invoices'] });
+      queryClient.invalidateQueries({ queryKey: ['products'] });
+      toast({ title: 'تم الحذف', description: 'تم حذف الفاتورة بنجاح' });
+    } catch {
+      toast({ title: 'خطأ', description: 'فشل حذف الفاتورة', variant: 'destructive' });
+    }
   };
 
   const handleExportCSV = () => {
@@ -318,8 +338,8 @@ export default function Purchases() {
                     <span className="text-3xl font-bold text-primary tabular-nums">{total.toFixed(2)} د.ل</span>
                   </div>
                 </div>
-                <Button size="lg" className="w-full gap-2" onClick={handleSave} disabled={createInvoice.isPending}>
-                  {createInvoice.isPending ? <Loader2 className="h-5 w-5 animate-spin" /> : <><Save className="h-5 w-5" />حفظ فاتورة المشتريات</>}
+                <Button size="lg" className="w-full gap-2" onClick={handleSave} disabled={isSaving || createInvoice.isPending}>
+                  {(isSaving || createInvoice.isPending) ? <Loader2 className="h-5 w-5 animate-spin" /> : <><Save className="h-5 w-5" />حفظ فاتورة المشتريات</>}
                 </Button>
               </div>
             </div>
@@ -408,6 +428,7 @@ export default function Purchases() {
                         <div className="flex gap-1">
                           <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setViewInvoiceId(inv.id)}><Eye className="h-3.5 w-3.5" /></Button>
                           <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setEditInvoiceId(inv.id)}><Edit className="h-3.5 w-3.5" /></Button>
+                          <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => handleDeleteInvoice(inv.id)}><Trash2 className="h-3.5 w-3.5" /></Button>
                         </div>
                       </TableCell>
                     </TableRow>

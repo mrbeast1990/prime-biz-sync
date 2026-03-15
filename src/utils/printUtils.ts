@@ -70,8 +70,8 @@ function getTemplateColors(template?: string) {
 
 function buildPage(settings: PharmacySettings, title: string, body: string) {
   const colors = getTemplateColors(settings.invoiceTemplate);
-  const pharmacyLogo = settings.logo ? `<img src="${settings.logo}" alt="logo" style="height:80px;max-width:200px;object-fit:contain" />` : `<div style="font-size:20px;font-weight:700;color:${colors.primary}">${settings.name}</div>`;
-  const phifLogo = `<img src="/phif-logo.png" alt="PHIF" style="height:80px;max-width:200px;object-fit:contain" />`;
+  const pharmacyLogo = settings.logo ? `<img src="${settings.logo}" alt="logo" style="height:140px;max-width:300px;object-fit:contain" />` : `<div style="font-size:24px;font-weight:700;color:${colors.primary}">${settings.name}</div>`;
+  const phifLogo = `<img src="/phif-logo.png" alt="PHIF" style="height:140px;max-width:300px;object-fit:contain" />`;
   
   return `<!DOCTYPE html>
 <html dir="rtl" lang="ar">
@@ -82,7 +82,7 @@ function buildPage(settings: PharmacySettings, title: string, body: string) {
 @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap');
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:'Cairo',sans-serif;padding:20px;color:#1a1a1a;background:#fff}
-.header{display:flex;align-items:center;justify-content:space-between;border-bottom:2px solid ${colors.primary};padding-bottom:16px;margin-bottom:20px}
+.header{display:flex;align-items:center;justify-content:space-between;border-bottom:2px solid ${colors.primary};padding:0 30px 16px 30px;margin-bottom:20px}
 .header-center{text-align:center;flex:1}
 .pharmacy-name{font-size:22px;font-weight:700;color:${colors.primary}}
 .doc-title{font-size:16px;font-weight:600;margin-top:4px;color:#374151}
