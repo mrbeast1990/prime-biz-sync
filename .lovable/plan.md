@@ -1,50 +1,30 @@
 
 
-# خطة التعديلات الشاملة
+# خطة: تعديل أحجام الشعارات + إصلاح التنقل على الموبايل + أفكار تطبيق سطح المكتب
 
-## المشاكل والتعديلات المطلوبة
+## 1. تعديل أحجام الشعارات في PDF (`src/utils/printUtils.ts`)
 
-### 1. تعديل السداد (القيمة، النوع، التاريخ)
-- في `AccountDetailsDialog.tsx`: عند الضغط على صف "إيصال سداد"، إضافة زر تعديل يفتح نافذة تعديل تسمح بتغيير المبلغ المسدد وطريقة السداد وتاريخه
-- تحديث `handlePayment` لحفظ تاريخ السداد الفعلي (حالياً يُحفظ تاريخ الفاتورة نفسها)
+**السطر 73-74:** تعديل حجم شعار التأمين (PHIF) ليكون أصغر وشعار الصيدلية ليكون أكبر:
+- شعار الصيدلية (الترياق الشافي): `height: 180px` (أكبر من 140px)
+- شعار التأمين (PHIF): `height: 100px` (أصغر من 140px)
 
-### 2. طباعة إيصال السداد يعرض الرصيد المتبقي
-- في `printUtils.ts`: تعديل `printPaymentReceipt` لقبول حقل `remainingBalance` وعرضه في الإيصال المطبوع بعد المبلغ المسدد
-- في `AccountDetailsDialog.tsx`: تمرير الرصيد المتبقي عند استدعاء `handlePrintPayment`
+## 2. إصلاح التنقل على الموبايل
 
-### 3. تغيير كل التواريخ من العربية للإنجليزية
-جميع استخدامات `toLocaleDateString('ar-SA')` و `toLocaleDateString('ar-EG')` تُستبدل بـ `toLocaleDateString('en-GB')` في:
-- `src/pages/Sales.tsx` (سطر 56, 111)
-- `src/pages/POS.tsx` (سطر 423, 473)
-- `src/pages/Purchases.tsx` (سطر 193, 347)
-- `src/pages/Users.tsx` (سطر 193)
-- `src/pages/InsuranceCustomers.tsx` (سطر 76)
-- `src/components/dashboard/AlertCard.tsx` (سطر 65)
+المشكلة: الكود يبدو صحيحاً — الـ `Header` يحتوي زر hamburger والـ `Sidebar` يحتوي Sheet. لكن قد تكون المشكلة أن `SheetContent` تحتاج `SheetTitle` لضمان عمل Radix Dialog بشكل صحيح (accessibility requirement يمنع الفتح).
 
-### 4. ترقيم الفواتير بصيغة `T` + رقم تسلسلي عام (بدون تاريخ)
-- تعديل `generateInvoiceNumber` في `POS.tsx`: بدلاً من `INV-YYYYMMDD-XXX`، يصبح `T` + رقم تسلسلي عام يعتمد على عدد كل الفواتير في قاعدة البيانات
-- تعديل نفس المنطق في `Purchases.tsx` (سطر 110-117): بدلاً من `PUR-YYYYMMDD-XXX`، نفس الصيغة `T` + رقم تسلسلي
+**الحل في `Sidebar.tsx`:**
+- إضافة `SheetTitle` و `SheetDescription` (مخفي بـ `sr-only`) داخل `SheetContent` لحل مشكلة Radix accessibility
+- إضافة `aria-describedby={undefined}` إذا لزم الأمر
 
-### 5. إصلاح رصيد الموردين (يظهر صفر في صفحة الحسابات)
-**المشكلة**: صفحة الحسابات تعرض `contact.balance` من الجدول مباشرة، لكن هذا الحقل لا يُحدَّث دائماً بشكل صحيح. بينما في تفاصيل الحساب يُحسب الرصيد من مجموع الفواتير.
-**الحل**: في `Accounts.tsx`، حساب الرصيد الفعلي لكل مورد/زبون من الفواتير المرتبطة بدل الاعتماد على حقل `balance` فقط. أي: `الرصيد = مجموع الفواتير - مجموع المسدد`
+## 3. أفكار تطبيق سطح المكتب
 
-### 6. تلوين الأرصدة (سالب = أحمر، موجب = أخضر)
-- في `Accounts.tsx` و `AccountDetailsDialog.tsx`: إضافة لون أحمر للأرصدة السالبة (علينا) وأخضر للموجبة (لنا)
+سأقدم للمستخدم خيارين:
+1. **PWA (تطبيق ويب تقدمي)** — تثبيت من المتصفح بدون متجر
+2. **Electron/Capacitor** — تطبيق أصلي بالكامل
 
-### 7. تغيير خط أسماء الأصناف والاسم العلمي الإنجليزي
-**المشكلة**: `font-sans` المستخدم حالياً في `ProductTable.tsx` يعرض خط غير رسمي للنصوص الإنجليزية
-**الحل**: استبدال `font-sans` بخط أنسب. سنضيف فئة CSS مخصصة تستخدم خط `"Segoe UI", "Helvetica Neue", Arial, sans-serif` — أو الأفضل: إزالة `font-sans` والاعتماد على `IBM Plex Sans` المُعرَّف عالمياً في `index.css` كخط أساسي (وهو خط احترافي مناسب للنصوص الإنجليزية)
+---
 
-## الملفات المتأثرة
-- `src/components/accounts/AccountDetailsDialog.tsx` — تعديل السداد + إيصال الرصيد المتبقي + تلوين
-- `src/utils/printUtils.ts` — إضافة remainingBalance لإيصال السداد
-- `src/pages/Sales.tsx` — تواريخ إنجليزية
-- `src/pages/POS.tsx` — تواريخ إنجليزية + ترقيم T
-- `src/pages/Purchases.tsx` — تواريخ إنجليزية + ترقيم T
-- `src/pages/Users.tsx` — تاريخ إنجليزي
-- `src/pages/InsuranceCustomers.tsx` — تاريخ إنجليزي
-- `src/components/dashboard/AlertCard.tsx` — تاريخ إنجليزي
-- `src/pages/Accounts.tsx` — إصلاح الأرصدة + تلوين
-- `src/components/products/ProductTable.tsx` — تحسين خط الأصناف الإنجليزية
+**الملفات المتأثرة:**
+- `src/utils/printUtils.ts` (أحجام الشعارات)
+- `src/components/layout/Sidebar.tsx` (إصلاح Sheet للموبايل)
 
