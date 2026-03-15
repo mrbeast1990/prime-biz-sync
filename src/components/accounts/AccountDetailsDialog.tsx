@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Contact, InsuranceCustomer } from '@/types';
-import { Edit, FileText, Save, ChevronDown, Wallet, Printer, XCircle, ScrollText } from 'lucide-react';
+import { Edit, FileText, Save, ChevronDown, Wallet, Printer, XCircle, ScrollText, Trash2 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { useInvoices, useInsuranceSales, useInvoiceItems, useInsuranceSaleItems, useUpdateInvoice, useUpdateInvoiceItem, useUpdateContact, useUpdateInsuranceCustomer } from '@/hooks/useSupabaseData';
 import { useSettings } from '@/hooks/useSettings';
