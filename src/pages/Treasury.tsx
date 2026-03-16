@@ -8,11 +8,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { Wallet, TrendingUp, TrendingDown, Plus, ArrowUpCircle, ArrowDownCircle, Loader2, Users, FileDown, FileText, Save, Edit } from 'lucide-react';
+import { Wallet, TrendingUp, TrendingDown, Plus, ArrowUpCircle, ArrowDownCircle, Loader2, Users, FileDown, FileText, Save, Edit, ChevronLeft, ChevronRight, Shield } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
-import { useTreasuryEntries, useCreateTreasuryEntry, useInvoices, useProfiles, useInvoiceItems, useUpdateInvoiceItem } from '@/hooks/useSupabaseData';
+import { useTreasuryEntries, useCreateTreasuryEntry, useInvoices, useProfiles, useInvoiceItems, useUpdateInvoiceItem, useInsuranceSales } from '@/hooks/useSupabaseData';
 import { cn } from '@/lib/utils';
 import { exportToCSV, exportToPrintPDF } from '@/utils/exportUtils';
+import { AccountDetailsDialog } from '@/components/accounts/AccountDetailsDialog';
 
 const fmtDate = (d: string) => new Date(d).toLocaleDateString('en-GB');
 const fmtNum = (n: number) => n.toFixed(2);
@@ -21,12 +22,16 @@ export default function Treasury() {
   const { data: entries = [], isLoading } = useTreasuryEntries();
   const { data: allInvoices = [] } = useInvoices();
   const { data: profiles = [] } = useProfiles();
+  const { data: insuranceSales = [] } = useInsuranceSales();
   const createEntry = useCreateTreasuryEntry();
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [newEntry, setNewEntry] = useState({ type: 'deposit' as 'deposit' | 'withdrawal', description: '', amount: '' });
   const [selectedSeller, setSelectedSeller] = useState<string | null>(null);
   const [sellerView, setSellerView] = useState<'summary' | 'detail'>('summary');
   const [editInvoiceId, setEditInvoiceId] = useState<string | null>(null);
+
+  // For viewing insurance sale in AccountDetailsDialog
+  const [viewInsuranceSale, setViewInsuranceSale] = useState<any>(null);
 
   const salesTotal = entries.filter(e => e.category === 'sales').reduce((s, e) => s + Number(e.amount), 0);
   const purchasesTotal = entries.filter(e => e.category === 'purchases').reduce((s, e) => s + Number(e.amount), 0);
@@ -58,12 +63,19 @@ export default function Treasury() {
     return allInvoices.filter(i => i.created_by === userId && ['sale', 'return', 'damage', 'purchase'].includes(i.invoice_type));
   };
 
+  const getSellerInsuranceSales = (userId: string) => {
+    // Insurance sales don't have created_by, so we show all for now
+    // In a real scenario you'd filter by created_by
+    return insuranceSales;
+  };
+
   const getSellerStats = (userId: string) => {
     const invoices = getSellerInvoices(userId);
     const sales = invoices.filter(i => i.invoice_type === 'sale').reduce((s, i) => s + Number(i.total), 0);
     const purchases = invoices.filter(i => i.invoice_type === 'purchase').reduce((s, i) => s + Number(i.total), 0);
+    const insTotal = insuranceSales.reduce((s, i) => s + Number(i.total), 0);
     const count = invoices.length;
-    return { sales, purchases, count, net: sales - purchases };
+    return { sales, purchases, count, insTotal, net: sales - purchases };
   };
 
   if (isLoading) {
@@ -98,7 +110,6 @@ export default function Treasury() {
                   </TableRow></TableHeader>
                   <TableBody>
                     {entries.map(entry => {
-                      // Lookup invoice_number from reference_id
                       const invoiceNumber = entry.reference_id ? allInvoices.find((inv: any) => inv.id === entry.reference_id)?.invoice_number : null;
                       return (
                         <TableRow key={entry.id}>
@@ -131,7 +142,7 @@ export default function Treasury() {
                 <Button variant="outline" size="sm" onClick={() => {
                   const data = profiles.map((p: any) => {
                     const stats = getSellerStats(p.user_id);
-                    return { 'البائع': p.display_name, 'عدد العمليات': stats.count, 'المبيعات': fmtNum(stats.sales), 'المشتريات': fmtNum(stats.purchases), 'الصافي': fmtNum(stats.net) };
+                    return { 'البائع': p.display_name, 'عدد العمليات': stats.count, 'المبيعات': fmtNum(stats.sales), 'مبيعات التأمين': fmtNum(stats.insTotal), 'المشتريات': fmtNum(stats.purchases) };
                   });
                   exportToCSV(data, 'خزائن_البائعين');
                 }}><FileDown className="h-4 w-4 ml-1" /> Excel</Button>
@@ -146,8 +157,8 @@ export default function Treasury() {
                     <TableHead className="text-right">البائع</TableHead>
                     <TableHead className="text-right">عدد العمليات</TableHead>
                     <TableHead className="text-right">إجمالي المبيعات</TableHead>
+                    <TableHead className="text-right">مبيعات التأمين</TableHead>
                     <TableHead className="text-right">إجمالي المشتريات</TableHead>
-                    <TableHead className="text-right">الصافي</TableHead>
                     <TableHead className="text-right">إجراءات</TableHead>
                   </TableRow></TableHeader>
                   <TableBody>
@@ -158,8 +169,8 @@ export default function Treasury() {
                           <TableCell className="font-medium">{p.display_name || '—'}</TableCell>
                           <TableCell className="tabular-nums">{stats.count}</TableCell>
                           <TableCell className="tabular-nums text-success">{fmtNum(stats.sales)} د.ل</TableCell>
+                          <TableCell className="tabular-nums text-info">{fmtNum(stats.insTotal)} د.ل</TableCell>
                           <TableCell className="tabular-nums text-destructive">{fmtNum(stats.purchases)} د.ل</TableCell>
-                          <TableCell className={cn('tabular-nums font-bold', stats.net >= 0 ? 'text-success' : 'text-destructive')}>{fmtNum(stats.net)} د.ل</TableCell>
                           <TableCell>
                             <div className="flex gap-1">
                               <Button variant="outline" size="sm" onClick={() => { setSelectedSeller(p.user_id); setSellerView('summary'); }}>كشف إجمالي</Button>
@@ -178,9 +189,11 @@ export default function Treasury() {
                 userId={selectedSeller}
                 profiles={profiles}
                 invoices={allInvoices}
+                insuranceSales={insuranceSales}
                 view={sellerView}
                 onBack={() => setSelectedSeller(null)}
                 onEdit={(id) => setEditInvoiceId(id)}
+                onViewInsuranceSale={(sale) => setViewInsuranceSale(sale)}
               />
             )}
           </div>
@@ -207,31 +220,54 @@ export default function Treasury() {
   );
 }
 
-function SellerDetail({ userId, profiles, invoices, view, onBack, onEdit }: {
+function SellerDetail({ userId, profiles, invoices, insuranceSales, view, onBack, onEdit, onViewInsuranceSale }: {
   userId: string;
   profiles: any[];
   invoices: any[];
+  insuranceSales: any[];
   view: 'summary' | 'detail';
   onBack: () => void;
   onEdit: (id: string) => void;
+  onViewInsuranceSale: (sale: any) => void;
 }) {
   const profile = profiles.find((p: any) => p.user_id === userId);
   const allSellerInvoices = invoices.filter((i: any) => i.created_by === userId && ['sale', 'return', 'damage', 'purchase'].includes(i.invoice_type));
   
   const today = new Date().toISOString().slice(0, 10);
-  const monthStart = today.slice(0, 8) + '01';
-  const [dateFrom, setDateFrom] = useState(monthStart);
+  const [selectedDate, setSelectedDate] = useState(today);
+  const [dateFrom, setDateFrom] = useState(today);
   const [dateTo, setDateTo] = useState(today);
+
+  const navigateDate = (delta: number) => {
+    const d = new Date(selectedDate);
+    d.setDate(d.getDate() + delta);
+    const newDate = d.toISOString().slice(0, 10);
+    setSelectedDate(newDate);
+    setDateFrom(newDate);
+    setDateTo(newDate);
+  };
   
   const sellerInvoices = view === 'detail' 
     ? allSellerInvoices.filter((i: any) => i.invoice_date >= dateFrom && i.invoice_date <= dateTo)
     : allSellerInvoices;
+
+  const filteredInsuranceSales = view === 'detail'
+    ? insuranceSales.filter((s: any) => s.sale_date >= dateFrom && s.sale_date <= dateTo)
+    : insuranceSales;
+
   const sales = sellerInvoices.filter((i: any) => i.invoice_type === 'sale');
   const purchases = sellerInvoices.filter((i: any) => i.invoice_type === 'purchase');
   const salesTotal = sales.reduce((s: number, i: any) => s + Number(i.total), 0);
   const purchasesTotal = purchases.reduce((s: number, i: any) => s + Number(i.total), 0);
+  const insTotal = filteredInsuranceSales.reduce((s: number, i: any) => s + Number(i.total), 0);
 
   const typeLabels: Record<string, string> = { sale: 'بيع', return: 'استرجاع', damage: 'إتلاف', purchase: 'شراء' };
+
+  // Merge invoices and insurance sales for detail view
+  const allTransactions = view === 'detail' ? [
+    ...sellerInvoices.map((inv: any) => ({ ...inv, _type: 'invoice' as const })),
+    ...filteredInsuranceSales.map((s: any) => ({ ...s, _type: 'insurance' as const, invoice_date: s.sale_date, invoice_number: null, invoice_type: 'insurance' })),
+  ].sort((a, b) => new Date(b.invoice_date || b.sale_date).getTime() - new Date(a.invoice_date || a.sale_date).getTime()) : [];
 
   return (
     <div className="space-y-4">
@@ -241,25 +277,29 @@ function SellerDetail({ userId, profiles, invoices, view, onBack, onEdit }: {
       </div>
 
       {view === 'summary' ? (
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
           <Card className="border-0 shadow-card"><CardContent className="p-6 text-center"><p className="text-3xl font-bold text-primary tabular-nums">{sellerInvoices.length}</p><p className="text-sm text-muted-foreground mt-1">عدد العمليات</p></CardContent></Card>
           <Card className="border-0 shadow-card"><CardContent className="p-6 text-center"><p className="text-3xl font-bold text-success tabular-nums">{fmtNum(salesTotal)} د.ل</p><p className="text-sm text-muted-foreground mt-1">إجمالي المبيعات</p></CardContent></Card>
+          <Card className="border-0 shadow-card"><CardContent className="p-6 text-center"><p className="text-3xl font-bold text-info tabular-nums">{fmtNum(insTotal)} د.ل</p><p className="text-sm text-muted-foreground mt-1">مبيعات التأمين</p></CardContent></Card>
           <Card className="border-0 shadow-card"><CardContent className="p-6 text-center"><p className="text-3xl font-bold text-destructive tabular-nums">{fmtNum(purchasesTotal)} د.ل</p><p className="text-sm text-muted-foreground mt-1">إجمالي المشتريات</p></CardContent></Card>
         </div>
       ) : (
         <div className="rounded-xl bg-card shadow-card overflow-hidden">
           <div className="p-3 flex items-center gap-3 flex-wrap border-b">
-            <Label className="text-sm">من:</Label>
-            <Input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} className="w-[150px] h-8 text-sm" />
-            <Label className="text-sm">إلى:</Label>
-            <Input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} className="w-[150px] h-8 text-sm" />
+            <div className="flex items-center gap-1">
+              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => navigateDate(-1)}><ChevronRight className="h-4 w-4" /></Button>
+              <Input type="date" value={dateFrom} onChange={e => { setDateFrom(e.target.value); setSelectedDate(e.target.value); }} className="w-[150px] h-8 text-sm" />
+              <Label className="text-sm px-1">إلى</Label>
+              <Input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} className="w-[150px] h-8 text-sm" />
+              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => navigateDate(1)}><ChevronLeft className="h-4 w-4" /></Button>
+            </div>
             <div className="flex-1" />
             <Button variant="outline" size="sm" onClick={() => {
-              exportToCSV(sellerInvoices.map((inv: any) => ({
-                'رقم الفاتورة': inv.invoice_number || '—',
-                'التاريخ': fmtDate(inv.invoice_date),
-                'النوع': typeLabels[inv.invoice_type] || inv.invoice_type,
-                'الإجمالي': fmtNum(Number(inv.total)),
+              exportToCSV(allTransactions.map((t: any) => ({
+                'رقم الفاتورة': t.invoice_number || '—',
+                'التاريخ': fmtDate(t.invoice_date || t.sale_date),
+                'النوع': t._type === 'insurance' ? 'تأمين' : (typeLabels[t.invoice_type] || t.invoice_type),
+                'الإجمالي': fmtNum(Number(t.total)),
               })), `كشف_${profile?.display_name}`);
             }}><FileDown className="h-4 w-4 ml-1" /> Excel</Button>
           </div>
@@ -269,28 +309,31 @@ function SellerDetail({ userId, profiles, invoices, view, onBack, onEdit }: {
               <TableHead className="text-right">التاريخ</TableHead>
               <TableHead className="text-right">النوع</TableHead>
               <TableHead className="text-right">الإجمالي</TableHead>
-              <TableHead className="text-right">إجراءات</TableHead>
             </TableRow></TableHeader>
             <TableBody>
-              {sellerInvoices.map((inv: any) => (
-                <TableRow key={inv.id}>
-                  <TableCell className="font-mono text-sm">{inv.invoice_number || '—'}</TableCell>
-                  <TableCell className="tabular-nums">{fmtDate(inv.invoice_date)}</TableCell>
+              {allTransactions.map((t: any) => (
+                <TableRow key={t.id} className="cursor-pointer hover:bg-muted/50" onClick={() => {
+                  if (t._type === 'insurance') {
+                    onViewInsuranceSale(t);
+                  } else {
+                    onEdit(t.id);
+                  }
+                }}>
+                  <TableCell className="font-mono text-sm">{t.invoice_number || '—'}</TableCell>
+                  <TableCell className="tabular-nums">{fmtDate(t.invoice_date || t.sale_date)}</TableCell>
                   <TableCell>
                     <span className={cn('inline-block rounded-full px-2 py-0.5 text-xs font-medium',
-                      inv.invoice_type === 'sale' ? 'bg-success/10 text-success' :
-                      inv.invoice_type === 'purchase' ? 'bg-primary/10 text-primary' : 'bg-warning/10 text-warning'
+                      t._type === 'insurance' ? 'bg-info/10 text-info' :
+                      t.invoice_type === 'sale' ? 'bg-success/10 text-success' :
+                      t.invoice_type === 'purchase' ? 'bg-primary/10 text-primary' : 'bg-warning/10 text-warning'
                     )}>
-                      {typeLabels[inv.invoice_type] || inv.invoice_type}
+                      {t._type === 'insurance' ? 'تأمين' : (typeLabels[t.invoice_type] || t.invoice_type)}
                     </span>
                   </TableCell>
-                  <TableCell className="tabular-nums font-medium">{fmtNum(Number(inv.total))} د.ل</TableCell>
-                  <TableCell>
-                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => onEdit(inv.id)}><Edit className="h-3.5 w-3.5" /></Button>
-                  </TableCell>
+                  <TableCell className="tabular-nums font-medium">{fmtNum(Number(t.total))} د.ل</TableCell>
                 </TableRow>
               ))}
-              {sellerInvoices.length === 0 && <TableRow><TableCell colSpan={5} className="text-center py-8 text-muted-foreground">لا توجد عمليات</TableCell></TableRow>}
+              {allTransactions.length === 0 && <TableRow><TableCell colSpan={4} className="text-center py-8 text-muted-foreground">لا توجد عمليات</TableCell></TableRow>}
             </TableBody>
           </Table>
         </div>

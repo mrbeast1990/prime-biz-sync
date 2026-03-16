@@ -2,9 +2,11 @@ import { MainLayout } from '@/components/layout/MainLayout';
 import { AlertCard } from '@/components/dashboard/AlertCard';
 import { RecentTransactions } from '@/components/dashboard/RecentTransactions';
 import {
-  AlertTriangle, Clock, Shield, Loader2, Package, Truck, Users, Wallet, Landmark,
+  AlertTriangle, Clock, Shield, Loader2, Package, Truck, Users, Wallet, Landmark, TrendingUp,
 } from 'lucide-react';
-import { useProducts, useInvoices, useInsuranceSales, useTreasuryEntries, useContacts } from '@/hooks/useSupabaseData';
+import { useProducts, useInvoices, useInsuranceSales, useTreasuryEntries, useContacts, useInvoiceItems } from '@/hooks/useSupabaseData';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 
 export default function Dashboard() {
   const { data: products = [], isLoading: loadingProducts } = useProducts();
@@ -12,6 +14,22 @@ export default function Dashboard() {
   const { data: insuranceSales = [] } = useInsuranceSales();
   const { data: entries = [] } = useTreasuryEntries();
   const { data: allContacts = [] } = useContacts();
+
+  // Fetch all sale invoice items to calculate profit
+  const saleInvoiceIds = invoices.filter(i => i.invoice_type === 'sale').map(i => i.id);
+  const { data: allSaleItems = [] } = useQuery({
+    queryKey: ['all_sale_items', saleInvoiceIds.join(',')],
+    queryFn: async () => {
+      if (saleInvoiceIds.length === 0) return [];
+      const { data, error } = await supabase
+        .from('invoice_items')
+        .select('*')
+        .in('invoice_id', saleInvoiceIds);
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: saleInvoiceIds.length > 0,
+  });
 
   const lowStockProducts = products.filter(p => p.stock_quantity <= p.min_stock);
   const expiringProducts = products.filter(p => {
@@ -23,6 +41,14 @@ export default function Dashboard() {
   });
 
   const stockValue = products.reduce((sum, p) => sum + p.cost_price * p.stock_quantity, 0);
+  
+  // Calculate net profit: for each sold item, (sale_price - cost_price) * quantity
+  const netProfit = allSaleItems.reduce((sum, item: any) => {
+    const product = products.find(p => p.id === item.product_id);
+    if (!product) return sum;
+    return sum + (item.unit_price - product.cost_price) * item.quantity;
+  }, 0);
+
   const suppliers = allContacts.filter(c => c.contact_type === 'supplier');
   const customers = allContacts.filter(c => c.contact_type === 'customer');
   const getContactBalance = (contactId: string) => {
@@ -48,7 +74,7 @@ export default function Dashboard() {
   return (
     <MainLayout title="لوحة التحكم">
       {/* Financial Stats */}
-      <div className="grid grid-cols-2 gap-3 md:gap-4 md:grid-cols-5 animate-fade-in mb-6">
+      <div className="grid grid-cols-2 gap-3 md:gap-4 md:grid-cols-3 lg:grid-cols-6 animate-fade-in mb-6">
         <div className="rounded-xl bg-card p-4 md:p-5 shadow-card">
           <div className="flex items-center gap-2 md:gap-3">
             <div className="flex h-10 w-10 md:h-12 md:w-12 items-center justify-center rounded-full bg-primary/10"><Package className="h-5 w-5 md:h-6 md:w-6 text-primary" /></div>
@@ -73,10 +99,16 @@ export default function Dashboard() {
             <div className="min-w-0"><p className="text-lg md:text-2xl font-bold text-success tabular-nums truncate">{cashBalance.toFixed(2)} <span className="text-xs md:text-sm">د.ل</span></p><p className="text-xs text-muted-foreground">رصيد النقدية</p></div>
           </div>
         </div>
-        <div className="col-span-2 md:col-span-1 rounded-xl bg-card p-4 md:p-5 shadow-card">
+        <div className="rounded-xl bg-card p-4 md:p-5 shadow-card">
           <div className="flex items-center gap-2 md:gap-3">
             <div className="flex h-10 w-10 md:h-12 md:w-12 items-center justify-center rounded-full bg-info/10"><Landmark className="h-5 w-5 md:h-6 md:w-6 text-info" /></div>
             <div className="min-w-0"><p className="text-lg md:text-2xl font-bold text-info tabular-nums truncate">{cardSales.toFixed(2)} <span className="text-xs md:text-sm">د.ل</span></p><p className="text-xs text-muted-foreground">رصيد المصرف</p></div>
+          </div>
+        </div>
+        <div className="rounded-xl bg-card p-4 md:p-5 shadow-card">
+          <div className="flex items-center gap-2 md:gap-3">
+            <div className={`flex h-10 w-10 md:h-12 md:w-12 items-center justify-center rounded-full ${netProfit >= 0 ? 'bg-success/10' : 'bg-destructive/10'}`}><TrendingUp className={`h-5 w-5 md:h-6 md:w-6 ${netProfit >= 0 ? 'text-success' : 'text-destructive'}`} /></div>
+            <div className="min-w-0"><p className={`text-lg md:text-2xl font-bold tabular-nums truncate ${netProfit >= 0 ? 'text-success' : 'text-destructive'}`}>{netProfit.toFixed(2)} <span className="text-xs md:text-sm">د.ل</span></p><p className="text-xs text-muted-foreground">صافي الربح</p></div>
           </div>
         </div>
       </div>

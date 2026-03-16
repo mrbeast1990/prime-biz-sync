@@ -2,23 +2,34 @@ import { useState } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Search, Users, Truck, Shield, Loader2 } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Search, Users, Truck, Shield, Loader2, Plus } from 'lucide-react';
 import { Contact, InsuranceCustomer } from '@/types';
 import { AccountDetailsDialog } from '@/components/accounts/AccountDetailsDialog';
-import { useContacts, useInsuranceCustomers, useInsuranceSales, useInvoices } from '@/hooks/useSupabaseData';
+import { useContacts, useInsuranceCustomers, useInsuranceSales, useInvoices, useCreateContact, useCreateInsuranceCustomer } from '@/hooks/useSupabaseData';
 import { cn } from '@/lib/utils';
+import { toast } from '@/hooks/use-toast';
 
 export default function Accounts() {
   const { data: allContacts = [], isLoading: loadingContacts } = useContacts();
   const { data: insuranceCustomers = [], isLoading: loadingInsurance } = useInsuranceCustomers();
   const { data: insuranceSales = [] } = useInsuranceSales();
   const { data: allInvoices = [] } = useInvoices();
+  const createContact = useCreateContact();
+  const createInsuranceCustomer = useCreateInsuranceCustomer();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
   const [selectedInsurance, setSelectedInsurance] = useState<InsuranceCustomer | null>(null);
   const [dialogType, setDialogType] = useState<'customer' | 'supplier' | 'insurance'>('customer');
+  const [activeTab, setActiveTab] = useState('customers');
+
+  // Add contact/insurance dialog
+  const [showAddDialog, setShowAddDialog] = useState(false);
+  const [newForm, setNewForm] = useState({ name: '', phone: '', address: '', card_number: '' });
 
   const customers = allContacts.filter(c => c.contact_type === 'customer');
   const suppliers = allContacts.filter(c => c.contact_type === 'supplier');
@@ -59,6 +70,33 @@ export default function Accounts() {
       {balance.toFixed(2)} د.ل
     </span>
   );
+
+  const handleAdd = async () => {
+    if (!newForm.name.trim()) return;
+    try {
+      if (activeTab === 'insurance') {
+        await createInsuranceCustomer.mutateAsync({
+          name: newForm.name,
+          phone: newForm.phone || undefined,
+          card_number: newForm.card_number || undefined,
+        });
+      } else {
+        await createContact.mutateAsync({
+          name: newForm.name,
+          contact_type: activeTab === 'customers' ? 'customer' : 'supplier',
+          phone: newForm.phone || undefined,
+          address: newForm.address || undefined,
+        });
+      }
+      toast({ title: 'تم', description: 'تمت الإضافة بنجاح' });
+      setShowAddDialog(false);
+      setNewForm({ name: '', phone: '', address: '', card_number: '' });
+    } catch {
+      toast({ title: 'خطأ', description: 'فشلت الإضافة', variant: 'destructive' });
+    }
+  };
+
+  const addLabel = activeTab === 'customers' ? 'زبون' : activeTab === 'suppliers' ? 'مورد' : 'عميل تأمين';
 
   if (loadingContacts || loadingInsurance) {
     return <MainLayout title="الحسابات"><div className="flex items-center justify-center h-64"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div></MainLayout>;
@@ -106,12 +144,15 @@ export default function Accounts() {
   return (
     <MainLayout title="الحسابات">
       <div className="space-y-6">
-        <div className="relative max-w-md">
-          <Search className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="بحث بالاسم أو الهاتف..." className="pr-9" />
+        <div className="flex items-center gap-3 flex-wrap">
+          <div className="relative flex-1 max-w-md">
+            <Search className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="بحث بالاسم أو الهاتف..." className="pr-9" />
+          </div>
+          <Button onClick={() => setShowAddDialog(true)} size="sm"><Plus className="h-4 w-4 ml-1" /> إضافة {addLabel}</Button>
         </div>
 
-        <Tabs defaultValue="customers" dir="rtl">
+        <Tabs defaultValue="customers" dir="rtl" onValueChange={setActiveTab}>
           <TabsList className="w-full max-w-md">
             <TabsTrigger value="customers" className="flex-1 gap-2"><Users className="h-4 w-4" /> الزبائن</TabsTrigger>
             <TabsTrigger value="suppliers" className="flex-1 gap-2"><Truck className="h-4 w-4" /> الموردين</TabsTrigger>
@@ -193,6 +234,26 @@ export default function Accounts() {
         insuranceCustomer={selectedInsurance}
         type={dialogType}
       />
+
+      {/* Add Dialog */}
+      <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader><DialogTitle>إضافة {addLabel} جديد</DialogTitle></DialogHeader>
+          <div className="space-y-4">
+            <div><Label>الاسم *</Label><Input value={newForm.name} onChange={e => setNewForm({ ...newForm, name: e.target.value })} placeholder="أدخل الاسم" /></div>
+            <div><Label>رقم الهاتف</Label><Input value={newForm.phone} onChange={e => setNewForm({ ...newForm, phone: e.target.value })} placeholder="05xxxxxxxx" /></div>
+            {activeTab === 'insurance' ? (
+              <div><Label>رقم البطاقة</Label><Input value={newForm.card_number} onChange={e => setNewForm({ ...newForm, card_number: e.target.value })} placeholder="رقم بطاقة التأمين" /></div>
+            ) : (
+              <div><Label>العنوان</Label><Input value={newForm.address} onChange={e => setNewForm({ ...newForm, address: e.target.value })} placeholder="العنوان" /></div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowAddDialog(false)}>إلغاء</Button>
+            <Button onClick={handleAdd} disabled={!newForm.name.trim() || createContact.isPending || createInsuranceCustomer.isPending}>حفظ</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </MainLayout>
   );
 }
