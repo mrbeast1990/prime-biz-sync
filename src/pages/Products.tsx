@@ -7,8 +7,11 @@ import { ImportPreviewDialog } from '@/components/products/ImportPreviewDialog';
 import { PrintSelectDialog } from '@/components/products/PrintSelectDialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
 import { Plus, Search, Upload, Filter, Loader2, Printer, FileText, FileDown } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Product } from '@/types';
 import { toast } from '@/hooks/use-toast';
 import { useProducts, useCreateProduct, useUpdateProduct, useDeleteProduct } from '@/hooks/useSupabaseData';
@@ -27,6 +30,8 @@ export default function Products() {
   const [importProducts, setImportProducts] = useState<Partial<Product>[]>([]);
   const [isImportOpen, setIsImportOpen] = useState(false);
   const [isPrintOpen, setIsPrintOpen] = useState(false);
+  const [insuranceFilter, setInsuranceFilter] = useState<'all' | 'insurance' | 'non-insurance'>('all');
+  const [showArchived, setShowArchived] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -39,7 +44,11 @@ export default function Products() {
 
   const filteredProducts = products.filter((product) => {
     const matchesSearch = product.trade_name.includes(searchQuery) || (product.scientific_name || '').toLowerCase().includes(searchQuery.toLowerCase()) || (product.barcode || '').includes(searchQuery) || (product.category || '').includes(searchQuery);
-    if (!searchQuery && product.stock_quantity === 0) return false;
+    // Hide zero-stock unless showArchived is on
+    if (!showArchived && !searchQuery && product.stock_quantity === 0) return false;
+    // Insurance filter
+    if (insuranceFilter === 'insurance' && !product.is_insurance) return false;
+    if (insuranceFilter === 'non-insurance' && product.is_insurance) return false;
     return matchesSearch;
   });
 
@@ -60,7 +69,6 @@ export default function Products() {
       } else {
         await createProduct.mutateAsync(productData);
         toast({ title: 'تمت الإضافة ✓', description: 'تم إضافة الصنف — أدخل الصنف التالي' });
-        // Don't close modal for new products — let user keep adding
       }
       if (searchParams.get('returnTo') === 'purchases') { setIsModalOpen(false); navigate('/purchases?restore=true'); }
       return true;
@@ -107,6 +115,8 @@ export default function Products() {
     toast({ title: 'تم الاستيراد', description: `تمت إضافة ${success} صنف بنجاح${failed > 0 ? ` | فشل ${failed}` : ''}`, variant: failed > 0 ? 'destructive' : 'default' });
   };
 
+  const archivedCount = products.filter(p => p.stock_quantity === 0).length;
+
   if (isLoading) {
     return <MainLayout title="بطاقة صنف"><div className="flex items-center justify-center h-64"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div></MainLayout>;
   }
@@ -121,8 +131,22 @@ export default function Products() {
             <Search className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input placeholder="بحث بالاسم أو الكود أو التصنيف..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="pr-9 input-focus" />
           </div>
+          <Select value={insuranceFilter} onValueChange={(v) => setInsuranceFilter(v as typeof insuranceFilter)}>
+            <SelectTrigger className="w-[140px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">الكل</SelectItem>
+              <SelectItem value="insurance">تأمين فقط</SelectItem>
+              <SelectItem value="non-insurance">خارج التأمين</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
-        <div className="flex gap-2 md:gap-3 flex-wrap">
+        <div className="flex gap-2 md:gap-3 flex-wrap items-center">
+          <div className="flex items-center gap-2">
+            <Switch id="showArchived" checked={showArchived} onCheckedChange={setShowArchived} />
+            <Label htmlFor="showArchived" className="text-xs whitespace-nowrap">المؤرشفة ({archivedCount})</Label>
+          </div>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" className="gap-2" size="sm"><Printer className="h-4 w-4" /><span className="hidden sm:inline">طباعة</span></Button>

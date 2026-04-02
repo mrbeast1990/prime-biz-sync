@@ -324,6 +324,19 @@ export function ProductModal({ isOpen, onClose, onSave, product }: ProductModalP
             <span className="text-xs text-muted-foreground">(يتم تحديد تاريخ الصلاحية عند الشراء)</span>
           </div>
 
+          <div className="flex flex-wrap items-center gap-6">
+            <div className="flex items-center gap-3">
+              <Switch id="is_insurance" checked={formData.is_insurance}
+                onCheckedChange={(checked) => setFormData({ ...formData, is_insurance: checked })} />
+              <Label htmlFor="is_insurance">هذا العلاج للتأمين</Label>
+            </div>
+            <div className="flex items-center gap-3">
+              <Switch id="is_insurance_shortcut" checked={formData.is_insurance_shortcut}
+                onCheckedChange={(checked) => setFormData({ ...formData, is_insurance_shortcut: checked })} />
+              <Label htmlFor="is_insurance_shortcut">إضافة إلى اختصارات مبيعات التأمين</Label>
+            </div>
+          </div>
+
           <div className="space-y-2">
             <Label htmlFor="image_url">رابط صورة الصنف (اختياري)</Label>
             <Input id="image_url" value={formData.image_url}

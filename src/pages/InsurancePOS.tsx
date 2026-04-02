@@ -2,8 +2,9 @@ import { useState, useRef, useEffect } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import {
-  Barcode, Search, Plus, Minus, Trash2, Banknote, ShoppingCart, X, Shield, Loader2,
+  Barcode, Search, Plus, Minus, Trash2, Banknote, ShoppingCart, X, Shield, Loader2, Zap,
 } from 'lucide-react';
 import { Product, CartItem, InsuranceCustomer } from '@/types';
 import { cn } from '@/lib/utils';
@@ -35,7 +36,8 @@ export default function InsurancePOS() {
     return () => { if (cart.length > 0) { sessionStorage.setItem(DRAFT_KEY, JSON.stringify(cart)); } };
   }, [cart]);
 
-  // Only show products when searching + hide zero stock
+  const shortcutProducts = products.filter(p => p.is_insurance_shortcut && p.stock_quantity > 0);
+
   const showProducts = searchQuery.length > 0;
   const filteredProducts = showProducts ? products.filter(
     (product) =>
@@ -103,7 +105,32 @@ export default function InsurancePOS() {
 
   return (
     <MainLayout title="البيع لمستخدمين التأمين">
-      <div className="grid h-[calc(100vh-8rem)] grid-cols-1 gap-4 md:gap-6 lg:grid-cols-3">
+      {/* Shortcuts Section */}
+      {shortcutProducts.length > 0 && (
+        <div className="mb-3 md:mb-4">
+          <div className="flex items-center gap-2 mb-2">
+            <Zap className="h-4 w-4 text-primary" />
+            <span className="text-sm font-medium text-muted-foreground">اختصارات سريعة</span>
+          </div>
+          <ScrollArea className="w-full whitespace-nowrap">
+            <div className="flex gap-2 pb-2">
+              {shortcutProducts.map((product) => (
+                <button
+                  key={product.id}
+                  onClick={() => addToCart(product)}
+                  className="inline-flex flex-col items-center gap-1 rounded-lg border border-border bg-card px-3 py-2 min-w-[100px] md:min-w-[120px] hover:bg-accent hover:border-primary/50 transition-all active:scale-95 shrink-0"
+                >
+                  <span className="text-xs md:text-sm font-medium text-card-foreground truncate max-w-[90px] md:max-w-[110px]">{product.trade_name}</span>
+                  <span className="text-xs font-bold text-primary tabular-nums">{product.sale_price.toFixed(2)} د.ل</span>
+                </button>
+              ))}
+            </div>
+            <ScrollBar orientation="horizontal" />
+          </ScrollArea>
+        </div>
+      )}
+
+      <div className="grid h-[calc(100vh-12rem)] grid-cols-1 gap-4 md:gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2 flex flex-col">
           <form onSubmit={handleBarcodeSubmit} className="mb-3 md:mb-4">
             <div className="relative">
