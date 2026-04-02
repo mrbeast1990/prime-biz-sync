@@ -113,7 +113,7 @@ export function ProductModal({ isOpen, onClose, onSave, product }: ProductModalP
         barcode: generateCode(), trade_name: '', scientific_name: '', category: '',
         packaging_type: 'علبة', units_per_package: 1, has_expiry: true,
         image_url: '', stock_quantity: 0, min_stock: 0, cost_price: 0, sale_price: 0,
-        batch_number: '',
+        batch_number: '', is_insurance: false, is_insurance_shortcut: false,
       });
       setIsShortcut(false);
     }
