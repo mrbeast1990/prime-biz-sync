@@ -91,7 +91,7 @@ export function ProductModal({ isOpen, onClose, onSave, product }: ProductModalP
     barcode: '', trade_name: '', scientific_name: '', category: '',
     packaging_type: 'علبة', units_per_package: 1, has_expiry: true,
     image_url: '', stock_quantity: 0, min_stock: 0, cost_price: 0, sale_price: 0,
-    batch_number: '',
+    batch_number: '', is_insurance: false, is_insurance_shortcut: false,
   });
 
   useEffect(() => {
@@ -104,6 +104,8 @@ export function ProductModal({ isOpen, onClose, onSave, product }: ProductModalP
         stock_quantity: product.stock_quantity, min_stock: product.min_stock,
         cost_price: product.cost_price, sale_price: product.sale_price,
         batch_number: product.batch_number || '',
+        is_insurance: product.is_insurance ?? false,
+        is_insurance_shortcut: product.is_insurance_shortcut ?? false,
       });
       setIsShortcut(getShortcuts().includes(product.id));
     } else {
@@ -111,7 +113,7 @@ export function ProductModal({ isOpen, onClose, onSave, product }: ProductModalP
         barcode: generateCode(), trade_name: '', scientific_name: '', category: '',
         packaging_type: 'علبة', units_per_package: 1, has_expiry: true,
         image_url: '', stock_quantity: 0, min_stock: 0, cost_price: 0, sale_price: 0,
-        batch_number: '',
+        batch_number: '', is_insurance: false, is_insurance_shortcut: false,
       });
       setIsShortcut(false);
     }
@@ -180,7 +182,7 @@ export function ProductModal({ isOpen, onClose, onSave, product }: ProductModalP
           barcode: generateCode(), trade_name: '', scientific_name: '', category: '',
           packaging_type: 'علبة', units_per_package: 1, has_expiry: true,
           image_url: '', stock_quantity: 0, min_stock: 0, cost_price: 0, sale_price: 0,
-          batch_number: '',
+          batch_number: '', is_insurance: false, is_insurance_shortcut: false,
         });
         setSuggestions([]);
         setShowSuggestions(false);
@@ -320,6 +322,19 @@ export function ProductModal({ isOpen, onClose, onSave, product }: ProductModalP
               onCheckedChange={(checked) => setFormData({ ...formData, has_expiry: checked })} />
             <Label htmlFor="has_expiry">خاضع لصلاحية</Label>
             <span className="text-xs text-muted-foreground">(يتم تحديد تاريخ الصلاحية عند الشراء)</span>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-6">
+            <div className="flex items-center gap-3">
+              <Switch id="is_insurance" checked={formData.is_insurance}
+                onCheckedChange={(checked) => setFormData({ ...formData, is_insurance: checked })} />
+              <Label htmlFor="is_insurance">هذا العلاج للتأمين</Label>
+            </div>
+            <div className="flex items-center gap-3">
+              <Switch id="is_insurance_shortcut" checked={formData.is_insurance_shortcut}
+                onCheckedChange={(checked) => setFormData({ ...formData, is_insurance_shortcut: checked })} />
+              <Label htmlFor="is_insurance_shortcut">إضافة إلى اختصارات مبيعات التأمين</Label>
+            </div>
           </div>
 
           <div className="space-y-2">

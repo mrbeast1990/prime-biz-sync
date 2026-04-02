@@ -15,6 +15,8 @@ export interface Product {
   has_expiry: boolean;
   image_url?: string;
   is_active?: boolean;
+  is_insurance?: boolean;
+  is_insurance_shortcut?: boolean;
   batch_number?: string;
   created_at: string;
   updated_at: string;
