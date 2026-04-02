@@ -104,6 +104,8 @@ export function ProductModal({ isOpen, onClose, onSave, product }: ProductModalP
         stock_quantity: product.stock_quantity, min_stock: product.min_stock,
         cost_price: product.cost_price, sale_price: product.sale_price,
         batch_number: product.batch_number || '',
+        is_insurance: product.is_insurance ?? false,
+        is_insurance_shortcut: product.is_insurance_shortcut ?? false,
       });
       setIsShortcut(getShortcuts().includes(product.id));
     } else {
