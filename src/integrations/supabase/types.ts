@@ -374,6 +374,8 @@ export type Database = {
           id: string
           image_url: string | null
           is_active: boolean
+          is_insurance: boolean
+          is_insurance_shortcut: boolean
           min_stock: number
           packaging_type: string | null
           sale_price: number
@@ -394,6 +396,8 @@ export type Database = {
           id?: string
           image_url?: string | null
           is_active?: boolean
+          is_insurance?: boolean
+          is_insurance_shortcut?: boolean
           min_stock?: number
           packaging_type?: string | null
           sale_price?: number
@@ -414,6 +418,8 @@ export type Database = {
           id?: string
           image_url?: string | null
           is_active?: boolean
+          is_insurance?: boolean
+          is_insurance_shortcut?: boolean
           min_stock?: number
           packaging_type?: string | null
           sale_price?: number
