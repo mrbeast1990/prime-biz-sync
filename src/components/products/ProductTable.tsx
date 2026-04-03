@@ -1,5 +1,6 @@
 import { Product } from '@/types';
 import { Edit, Trash2, MoreVertical, AlertTriangle } from 'lucide-react';
+import { formatStockDisplay } from '@/utils/stockDisplay';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
