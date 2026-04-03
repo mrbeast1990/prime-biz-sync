@@ -91,7 +91,7 @@ export function ProductTable({ products, onEdit, onDelete }: ProductTableProps) 
                     <span className="inline-flex items-center rounded-full bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary">{product.packaging_type} ({product.units_per_package})</span>
                   </td>
                   <td className="px-4 py-3">
-                    <span className={cn('inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium tabular-nums', isLowStock(product) ? 'bg-destructive/10 text-destructive' : 'bg-success/10 text-success')}>{product.stock_quantity}</span>
+                    <span className={cn('inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium', isLowStock(product) ? 'bg-destructive/10 text-destructive' : 'bg-success/10 text-success')}>{formatStockDisplay(product.stock_quantity, product.units_per_package)}</span>
                   </td>
                   <td className="px-4 py-3 tabular-nums text-muted-foreground">{product.cost_price.toFixed(2)} د.ل</td>
                   <td className="px-4 py-3 tabular-nums font-medium text-card-foreground">{product.sale_price.toFixed(2)} د.ل</td>
