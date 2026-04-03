@@ -334,7 +334,7 @@ export default function POS() {
                         <div className="flex items-start justify-between">
                           <div className="flex-1 min-w-0">
                             <p className="font-medium text-card-foreground truncate">{item.product.trade_name}</p>
-                            <p className="text-sm text-muted-foreground">{item.product.sale_price.toFixed(2)} د.ل</p>
+                            <p className="text-sm text-muted-foreground">{getUnitPrice(item.product.sale_price, item.product.units_per_package).toFixed(2)} د.ل/وحدة</p>
                           </div>
                           <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive hover:text-destructive flex-shrink-0" onClick={() => removeFromCart(item.product.id)}><Trash2 className="h-3 w-3" /></Button>
                         </div>
