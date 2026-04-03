@@ -275,7 +275,7 @@ export default function POS() {
                         <p className="font-medium text-card-foreground text-sm leading-tight truncate">{product.trade_name}</p>
                         <div className="mt-1 flex items-center justify-between">
                           <span className="text-sm font-bold text-primary tabular-nums">{product.sale_price.toFixed(2)}</span>
-                          <span className={cn('text-xs rounded-full px-1.5 py-0.5', product.stock_quantity <= product.min_stock ? 'bg-destructive/10 text-destructive' : 'bg-success/10 text-success')}>{product.stock_quantity}</span>
+                          <span className={cn('text-xs rounded-full px-1.5 py-0.5', product.stock_quantity <= product.min_stock ? 'bg-destructive/10 text-destructive' : 'bg-success/10 text-success')}>{formatStockDisplay(product.stock_quantity, product.units_per_package)}</span>
                         </div>
                       </button>
                     ))}
