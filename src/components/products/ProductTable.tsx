@@ -44,7 +44,7 @@ export function ProductTable({ products, onEdit, onDelete }: ProductTableProps) 
               </DropdownMenu>
             </div>
             <div className="mt-3 grid grid-cols-3 gap-2 text-sm">
-              <div><span className="text-muted-foreground text-xs">المخزون</span><p className={cn('font-medium tabular-nums', isLowStock(product) ? 'text-destructive' : 'text-success')}>{product.stock_quantity} {isLowStock(product) && <AlertTriangle className="inline h-3 w-3" />}</p></div>
+              <div><span className="text-muted-foreground text-xs">المخزون</span><p className={cn('font-medium text-xs', isLowStock(product) ? 'text-destructive' : 'text-success')}>{formatStockDisplay(product.stock_quantity, product.units_per_package)} {isLowStock(product) && <AlertTriangle className="inline h-3 w-3" />}</p></div>
               <div><span className="text-muted-foreground text-xs">التكلفة</span><p className="tabular-nums">{product.cost_price.toFixed(2)}</p></div>
               <div><span className="text-muted-foreground text-xs">البيع</span><p className="font-medium tabular-nums">{product.sale_price.toFixed(2)}</p></div>
             </div>
