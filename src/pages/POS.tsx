@@ -24,12 +24,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 
 const saleModes: { mode: SaleMode; label: string; icon: React.ElementType; variant: 'default' | 'secondary' | 'outline' | 'destructive' }[] = [
   { mode: 'cash', label: 'نقداً', icon: Banknote, variant: 'default' },
