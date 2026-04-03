@@ -132,19 +132,22 @@ export default function POS() {
   useEffect(() => { barcodeRef.current?.focus(); }, []);
 
   const addToCart = (product: Product) => {
+    // Adding 1 unit (strip) by default
+    const unitPrice = getUnitPrice(product.sale_price, product.units_per_package);
     const existingItem = cart.find((item) => item.product.id === product.id);
     if (existingItem) {
       if (existingItem.quantity >= product.stock_quantity) {
         toast({ title: 'خطأ', description: 'الكمية المطلوبة غير متوفرة في المخزون', variant: 'destructive' });
         return;
       }
+      const newQty = existingItem.quantity + 1;
       setCart(cart.map((item) =>
         item.product.id === product.id
-          ? { ...item, quantity: item.quantity + 1, total: (item.quantity + 1) * item.product.sale_price }
+          ? { ...item, quantity: newQty, total: newQty * unitPrice }
           : item
       ));
     } else {
-      setCart([...cart, { product, quantity: 1, total: product.sale_price }]);
+      setCart([...cart, { product, quantity: 1, total: unitPrice }]);
     }
   };
 
