@@ -169,7 +169,8 @@ export default function POS() {
             toast({ title: 'خطأ', description: 'الكمية المطلوبة غير متوفرة في المخزون', variant: 'destructive' });
             return item;
           }
-          return { ...item, quantity: newQuantity, total: newQuantity * item.product.sale_price };
+          const unitPrice = getUnitPrice(item.product.sale_price, item.product.units_per_package);
+          return { ...item, quantity: newQuantity, total: newQuantity * unitPrice };
         }
         return item;
       }).filter(Boolean) as CartItem[]
