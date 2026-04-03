@@ -201,13 +201,17 @@ export default function POS() {
         paid: saleMode === 'credit' ? 0 : total,
         status: saleMode === 'credit' ? 'pending' : 'completed',
         payment_method: saleMode === 'damage' ? 'damage' : saleMode,
-        items: cart.map(item => ({
-          product_id: item.product.id,
-          product_name: item.product.trade_name,
-          quantity: item.quantity,
-          unit_price: item.product.sale_price,
-          total: item.total,
-        })),
+        items: cart.map(item => {
+          const unitPrice = getUnitPrice(item.product.sale_price, item.product.units_per_package);
+          return {
+            product_id: item.product.id,
+            product_name: item.product.trade_name,
+            quantity: item.quantity,
+            unit_price: unitPrice,
+            total: item.total,
+            unit_type: 'unit',
+          };
+        }),
       });
 
       for (const item of cart) {
