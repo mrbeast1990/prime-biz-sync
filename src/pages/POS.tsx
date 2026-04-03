@@ -341,7 +341,7 @@ export default function POS() {
                         <div className="mt-2 flex items-center justify-between">
                           <div className="flex items-center gap-2">
                             <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => updateQuantity(item.product.id, -1)}><Minus className="h-3 w-3" /></Button>
-                            <span className="w-8 text-center font-medium tabular-nums">{item.quantity}</span>
+                            <span className="w-auto text-center font-medium tabular-nums text-xs">{formatStockDisplay(item.quantity, item.product.units_per_package)}</span>
                             <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => updateQuantity(item.product.id, 1)}><Plus className="h-3 w-3" /></Button>
                           </div>
                           <p className="font-bold text-card-foreground tabular-nums">{item.total.toFixed(2)} د.ل</p>
