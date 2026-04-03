@@ -108,7 +108,7 @@ export default function Dashboard() {
         <div className="rounded-xl bg-card p-4 md:p-5 shadow-card">
           <div className="flex items-center gap-2 md:gap-3">
             <div className={`flex h-10 w-10 md:h-12 md:w-12 items-center justify-center rounded-full ${netProfit >= 0 ? 'bg-success/10' : 'bg-destructive/10'}`}><TrendingUp className={`h-5 w-5 md:h-6 md:w-6 ${netProfit >= 0 ? 'text-success' : 'text-destructive'}`} /></div>
-            <div className="min-w-0"><p className={`text-lg md:text-2xl font-bold tabular-nums truncate ${netProfit >= 0 ? 'text-success' : 'text-destructive'}`}>{netProfit.toFixed(2)} <span className="text-xs md:text-sm">د.ل</span></p><p className="text-xs text-muted-foreground">صافي الربح</p></div>
+            <div className="min-w-0"><p className={`text-sm md:text-xl font-bold tabular-nums break-all ${netProfit >= 0 ? 'text-success' : 'text-destructive'}`}>{netProfit.toFixed(2)} <span className="text-xs">د.ل</span></p><p className="text-xs text-muted-foreground">صافي الربح</p></div>
           </div>
         </div>
       </div>

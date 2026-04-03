@@ -194,8 +194,9 @@ export function useInsuranceSales() {
 export function useCreateInsuranceSale() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (sale: { customer_id: string; customer_name: string; total: number; items: { product_id: string; product_name: string; quantity: number; unit_price: number; total: number }[] }) => {
-      const { items, ...saleData } = sale;
+    mutationFn: async (sale: { customer_id: string; customer_name: string; total: number; sale_date?: string; items: { product_id: string; product_name: string; quantity: number; unit_price: number; total: number }[] }) => {
+      const { items, sale_date, ...rest } = sale;
+      const saleData = sale_date ? { ...rest, sale_date } : rest;
       const { data, error } = await supabase.from('insurance_sales').insert(saleData).select().single();
       if (error) throw error;
 
