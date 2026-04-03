@@ -17,6 +17,13 @@ import { toast } from '@/hooks/use-toast';
 import { useProducts, useContacts, useCreateInvoice, useUpdateProductStock, useInvoices, useInvoiceItems, useUpdateInvoiceItem, useProfiles } from '@/hooks/useSupabaseData';
 import { supabase } from '@/integrations/supabase/client';
 import { exportToCSV, exportToPrintPDF } from '@/utils/exportUtils';
+import { formatStockDisplay, getUnitPrice } from '@/utils/stockDisplay';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import {
   DropdownMenu,
   DropdownMenuContent,
