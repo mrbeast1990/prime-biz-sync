@@ -102,7 +102,7 @@ export default function Dashboard() {
         <div className="rounded-xl bg-card p-4 md:p-5 shadow-card">
           <div className="flex items-center gap-2 md:gap-3">
             <div className="flex h-10 w-10 md:h-12 md:w-12 items-center justify-center rounded-full bg-info/10"><Landmark className="h-5 w-5 md:h-6 md:w-6 text-info" /></div>
-            <div className="min-w-0"><p className="text-lg md:text-2xl font-bold text-info tabular-nums truncate">{cardSales.toFixed(2)} <span className="text-xs md:text-sm">د.ل</span></p><p className="text-xs text-muted-foreground">رصيد المصرف</p></div>
+            <div className="min-w-0"><p className="text-sm md:text-xl font-bold text-info tabular-nums break-all">{cardSales.toFixed(2)} <span className="text-xs">د.ل</span></p><p className="text-xs text-muted-foreground">رصيد المصرف</p></div>
           </div>
         </div>
         <div className="rounded-xl bg-card p-4 md:p-5 shadow-card">
