@@ -78,37 +78,37 @@ export default function Dashboard() {
         <div className="rounded-xl bg-card p-4 md:p-5 shadow-card">
           <div className="flex items-center gap-2 md:gap-3">
             <div className="flex h-10 w-10 md:h-12 md:w-12 items-center justify-center rounded-full bg-primary/10"><Package className="h-5 w-5 md:h-6 md:w-6 text-primary" /></div>
-            <div className="min-w-0"><p className="text-lg md:text-2xl font-bold text-card-foreground tabular-nums truncate">{stockValue.toFixed(2)} <span className="text-xs md:text-sm">د.ل</span></p><p className="text-xs text-muted-foreground">رصيد البضاعة</p></div>
+            <div className="min-w-0"><p className="text-sm md:text-xl font-bold text-card-foreground tabular-nums break-all">{stockValue.toFixed(2)} <span className="text-xs">د.ل</span></p><p className="text-xs text-muted-foreground">رصيد البضاعة</p></div>
           </div>
         </div>
         <div className="rounded-xl bg-card p-4 md:p-5 shadow-card">
           <div className="flex items-center gap-2 md:gap-3">
             <div className="flex h-10 w-10 md:h-12 md:w-12 items-center justify-center rounded-full bg-destructive/10"><Truck className="h-5 w-5 md:h-6 md:w-6 text-destructive" /></div>
-            <div className="min-w-0"><p className="text-lg md:text-2xl font-bold text-destructive tabular-nums truncate">{supplierDebt.toFixed(2)} <span className="text-xs md:text-sm">د.ل</span></p><p className="text-xs text-muted-foreground">دين الشركات</p></div>
+            <div className="min-w-0"><p className="text-sm md:text-xl font-bold text-destructive tabular-nums break-all">{supplierDebt.toFixed(2)} <span className="text-xs">د.ل</span></p><p className="text-xs text-muted-foreground">دين الشركات</p></div>
           </div>
         </div>
         <div className="rounded-xl bg-card p-4 md:p-5 shadow-card">
           <div className="flex items-center gap-2 md:gap-3">
             <div className="flex h-10 w-10 md:h-12 md:w-12 items-center justify-center rounded-full bg-warning/10"><Users className="h-5 w-5 md:h-6 md:w-6 text-warning" /></div>
-            <div className="min-w-0"><p className="text-lg md:text-2xl font-bold text-warning tabular-nums truncate">{customerDebt.toFixed(2)} <span className="text-xs md:text-sm">د.ل</span></p><p className="text-xs text-muted-foreground">دين الزبائن</p></div>
+            <div className="min-w-0"><p className="text-sm md:text-xl font-bold text-warning tabular-nums break-all">{customerDebt.toFixed(2)} <span className="text-xs">د.ل</span></p><p className="text-xs text-muted-foreground">دين الزبائن</p></div>
           </div>
         </div>
         <div className="rounded-xl bg-card p-4 md:p-5 shadow-card">
           <div className="flex items-center gap-2 md:gap-3">
             <div className="flex h-10 w-10 md:h-12 md:w-12 items-center justify-center rounded-full bg-success/10"><Wallet className="h-5 w-5 md:h-6 md:w-6 text-success" /></div>
-            <div className="min-w-0"><p className="text-lg md:text-2xl font-bold text-success tabular-nums truncate">{cashBalance.toFixed(2)} <span className="text-xs md:text-sm">د.ل</span></p><p className="text-xs text-muted-foreground">رصيد النقدية</p></div>
+            <div className="min-w-0"><p className="text-sm md:text-xl font-bold text-success tabular-nums break-all">{cashBalance.toFixed(2)} <span className="text-xs">د.ل</span></p><p className="text-xs text-muted-foreground">رصيد النقدية</p></div>
           </div>
         </div>
         <div className="rounded-xl bg-card p-4 md:p-5 shadow-card">
           <div className="flex items-center gap-2 md:gap-3">
             <div className="flex h-10 w-10 md:h-12 md:w-12 items-center justify-center rounded-full bg-info/10"><Landmark className="h-5 w-5 md:h-6 md:w-6 text-info" /></div>
-            <div className="min-w-0"><p className="text-lg md:text-2xl font-bold text-info tabular-nums truncate">{cardSales.toFixed(2)} <span className="text-xs md:text-sm">د.ل</span></p><p className="text-xs text-muted-foreground">رصيد المصرف</p></div>
+            <div className="min-w-0"><p className="text-sm md:text-xl font-bold text-info tabular-nums break-all">{cardSales.toFixed(2)} <span className="text-xs">د.ل</span></p><p className="text-xs text-muted-foreground">رصيد المصرف</p></div>
           </div>
         </div>
         <div className="rounded-xl bg-card p-4 md:p-5 shadow-card">
           <div className="flex items-center gap-2 md:gap-3">
             <div className={`flex h-10 w-10 md:h-12 md:w-12 items-center justify-center rounded-full ${netProfit >= 0 ? 'bg-success/10' : 'bg-destructive/10'}`}><TrendingUp className={`h-5 w-5 md:h-6 md:w-6 ${netProfit >= 0 ? 'text-success' : 'text-destructive'}`} /></div>
-            <div className="min-w-0"><p className={`text-lg md:text-2xl font-bold tabular-nums truncate ${netProfit >= 0 ? 'text-success' : 'text-destructive'}`}>{netProfit.toFixed(2)} <span className="text-xs md:text-sm">د.ل</span></p><p className="text-xs text-muted-foreground">صافي الربح</p></div>
+            <div className="min-w-0"><p className={`text-sm md:text-xl font-bold tabular-nums break-all ${netProfit >= 0 ? 'text-success' : 'text-destructive'}`}>{netProfit.toFixed(2)} <span className="text-xs">د.ل</span></p><p className="text-xs text-muted-foreground">صافي الربح</p></div>
           </div>
         </div>
       </div>

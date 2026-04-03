@@ -1,5 +1,6 @@
 import { Product } from '@/types';
 import { Edit, Trash2, MoreVertical, AlertTriangle } from 'lucide-react';
+import { formatStockDisplay } from '@/utils/stockDisplay';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -43,7 +44,7 @@ export function ProductTable({ products, onEdit, onDelete }: ProductTableProps) 
               </DropdownMenu>
             </div>
             <div className="mt-3 grid grid-cols-3 gap-2 text-sm">
-              <div><span className="text-muted-foreground text-xs">المخزون</span><p className={cn('font-medium tabular-nums', isLowStock(product) ? 'text-destructive' : 'text-success')}>{product.stock_quantity} {isLowStock(product) && <AlertTriangle className="inline h-3 w-3" />}</p></div>
+              <div><span className="text-muted-foreground text-xs">المخزون</span><p className={cn('font-medium text-xs', isLowStock(product) ? 'text-destructive' : 'text-success')}>{formatStockDisplay(product.stock_quantity, product.units_per_package)} {isLowStock(product) && <AlertTriangle className="inline h-3 w-3" />}</p></div>
               <div><span className="text-muted-foreground text-xs">التكلفة</span><p className="tabular-nums">{product.cost_price.toFixed(2)}</p></div>
               <div><span className="text-muted-foreground text-xs">البيع</span><p className="font-medium tabular-nums">{product.sale_price.toFixed(2)}</p></div>
             </div>
@@ -90,7 +91,7 @@ export function ProductTable({ products, onEdit, onDelete }: ProductTableProps) 
                     <span className="inline-flex items-center rounded-full bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary">{product.packaging_type} ({product.units_per_package})</span>
                   </td>
                   <td className="px-4 py-3">
-                    <span className={cn('inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium tabular-nums', isLowStock(product) ? 'bg-destructive/10 text-destructive' : 'bg-success/10 text-success')}>{product.stock_quantity}</span>
+                    <span className={cn('inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium', isLowStock(product) ? 'bg-destructive/10 text-destructive' : 'bg-success/10 text-success')}>{formatStockDisplay(product.stock_quantity, product.units_per_package)}</span>
                   </td>
                   <td className="px-4 py-3 tabular-nums text-muted-foreground">{product.cost_price.toFixed(2)} د.ل</td>
                   <td className="px-4 py-3 tabular-nums font-medium text-card-foreground">{product.sale_price.toFixed(2)} د.ل</td>

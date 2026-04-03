@@ -17,6 +17,7 @@ import { toast } from '@/hooks/use-toast';
 import { useProducts, useContacts, useCreateInvoice, useUpdateProductStock, useInvoices, useInvoiceItems, useUpdateInvoiceItem, useProfiles } from '@/hooks/useSupabaseData';
 import { supabase } from '@/integrations/supabase/client';
 import { exportToCSV, exportToPrintPDF } from '@/utils/exportUtils';
+import { formatStockDisplay, getUnitPrice } from '@/utils/stockDisplay';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -125,19 +126,22 @@ export default function POS() {
   useEffect(() => { barcodeRef.current?.focus(); }, []);
 
   const addToCart = (product: Product) => {
+    // Adding 1 unit (strip) by default
+    const unitPrice = getUnitPrice(product.sale_price, product.units_per_package);
     const existingItem = cart.find((item) => item.product.id === product.id);
     if (existingItem) {
       if (existingItem.quantity >= product.stock_quantity) {
         toast({ title: 'خطأ', description: 'الكمية المطلوبة غير متوفرة في المخزون', variant: 'destructive' });
         return;
       }
+      const newQty = existingItem.quantity + 1;
       setCart(cart.map((item) =>
         item.product.id === product.id
-          ? { ...item, quantity: item.quantity + 1, total: (item.quantity + 1) * item.product.sale_price }
+          ? { ...item, quantity: newQty, total: newQty * unitPrice }
           : item
       ));
     } else {
-      setCart([...cart, { product, quantity: 1, total: product.sale_price }]);
+      setCart([...cart, { product, quantity: 1, total: unitPrice }]);
     }
   };
 
@@ -159,7 +163,8 @@ export default function POS() {
             toast({ title: 'خطأ', description: 'الكمية المطلوبة غير متوفرة في المخزون', variant: 'destructive' });
             return item;
           }
-          return { ...item, quantity: newQuantity, total: newQuantity * item.product.sale_price };
+          const unitPrice = getUnitPrice(item.product.sale_price, item.product.units_per_package);
+          return { ...item, quantity: newQuantity, total: newQuantity * unitPrice };
         }
         return item;
       }).filter(Boolean) as CartItem[]
@@ -196,13 +201,17 @@ export default function POS() {
         paid: saleMode === 'credit' ? 0 : total,
         status: saleMode === 'credit' ? 'pending' : 'completed',
         payment_method: saleMode === 'damage' ? 'damage' : saleMode,
-        items: cart.map(item => ({
-          product_id: item.product.id,
-          product_name: item.product.trade_name,
-          quantity: item.quantity,
-          unit_price: item.product.sale_price,
-          total: item.total,
-        })),
+        items: cart.map(item => {
+          const unitPrice = getUnitPrice(item.product.sale_price, item.product.units_per_package);
+          return {
+            product_id: item.product.id,
+            product_name: item.product.trade_name,
+            quantity: item.quantity,
+            unit_price: unitPrice,
+            total: item.total,
+            unit_type: 'unit',
+          };
+        }),
       });
 
       for (const item of cart) {
@@ -266,7 +275,7 @@ export default function POS() {
                         <p className="font-medium text-card-foreground text-sm leading-tight truncate">{product.trade_name}</p>
                         <div className="mt-1 flex items-center justify-between">
                           <span className="text-sm font-bold text-primary tabular-nums">{product.sale_price.toFixed(2)}</span>
-                          <span className={cn('text-xs rounded-full px-1.5 py-0.5', product.stock_quantity <= product.min_stock ? 'bg-destructive/10 text-destructive' : 'bg-success/10 text-success')}>{product.stock_quantity}</span>
+                          <span className={cn('text-xs rounded-full px-1.5 py-0.5', product.stock_quantity <= product.min_stock ? 'bg-destructive/10 text-destructive' : 'bg-success/10 text-success')}>{formatStockDisplay(product.stock_quantity, product.units_per_package)}</span>
                         </div>
                       </button>
                     ))}
@@ -285,7 +294,7 @@ export default function POS() {
                         <p className="mt-0.5 text-xs text-muted-foreground leading-tight truncate">{product.scientific_name}</p>
                         <div className="mt-1 flex items-center justify-between">
                           <span className="text-sm font-bold text-primary tabular-nums">{product.sale_price.toFixed(2)}</span>
-                          <span className={cn('text-xs rounded-full px-1.5 py-0.5', product.stock_quantity <= product.min_stock ? 'bg-destructive/10 text-destructive' : 'bg-success/10 text-success')}>{product.stock_quantity}</span>
+                          <span className={cn('text-xs rounded-full px-1.5 py-0.5', product.stock_quantity <= product.min_stock ? 'bg-destructive/10 text-destructive' : 'bg-success/10 text-success')}>{formatStockDisplay(product.stock_quantity, product.units_per_package)}</span>
                         </div>
                       </button>
                     ))}
@@ -325,14 +334,14 @@ export default function POS() {
                         <div className="flex items-start justify-between">
                           <div className="flex-1 min-w-0">
                             <p className="font-medium text-card-foreground truncate">{item.product.trade_name}</p>
-                            <p className="text-sm text-muted-foreground">{item.product.sale_price.toFixed(2)} د.ل</p>
+                            <p className="text-sm text-muted-foreground">{getUnitPrice(item.product.sale_price, item.product.units_per_package).toFixed(2)} د.ل/وحدة</p>
                           </div>
                           <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive hover:text-destructive flex-shrink-0" onClick={() => removeFromCart(item.product.id)}><Trash2 className="h-3 w-3" /></Button>
                         </div>
                         <div className="mt-2 flex items-center justify-between">
                           <div className="flex items-center gap-2">
                             <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => updateQuantity(item.product.id, -1)}><Minus className="h-3 w-3" /></Button>
-                            <span className="w-8 text-center font-medium tabular-nums">{item.quantity}</span>
+                            <span className="w-auto text-center font-medium tabular-nums text-xs">{formatStockDisplay(item.quantity, item.product.units_per_package)}</span>
                             <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => updateQuantity(item.product.id, 1)}><Plus className="h-3 w-3" /></Button>
                           </div>
                           <p className="font-bold text-card-foreground tabular-nums">{item.total.toFixed(2)} د.ل</p>

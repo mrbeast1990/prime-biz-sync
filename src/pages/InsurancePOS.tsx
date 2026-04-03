@@ -10,7 +10,19 @@ import { Product, CartItem, InsuranceCustomer } from '@/types';
 import { cn } from '@/lib/utils';
 import { toast } from '@/hooks/use-toast';
 import { InsuranceCustomerDialog } from '@/components/insurance/InsuranceCustomerDialog';
+import { QuickPurchaseModal } from '@/components/insurance/QuickPurchaseModal';
 import { useProducts, useCreateInsuranceSale, useUpdateProductStock } from '@/hooks/useSupabaseData';
+import { formatStockDisplay } from '@/utils/stockDisplay';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 const DRAFT_KEY = 'insurance_pos_draft';
 
@@ -23,6 +35,9 @@ export default function InsurancePOS() {
   const [searchQuery, setSearchQuery] = useState('');
   const [barcodeInput, setBarcodeInput] = useState('');
   const [showCustomerDialog, setShowCustomerDialog] = useState(false);
+  const [quickPurchaseProduct, setQuickPurchaseProduct] = useState<Product | null>(null);
+  const [showZeroStockAlert, setShowZeroStockAlert] = useState(false);
+  const [pendingZeroProduct, setPendingZeroProduct] = useState<Product | null>(null);
   const barcodeRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -41,7 +56,6 @@ export default function InsurancePOS() {
   const showProducts = searchQuery.length > 0;
   const filteredProducts = showProducts ? products.filter(
     (product) =>
-      product.stock_quantity > 0 &&
       (product.trade_name.includes(searchQuery) ||
       (product.scientific_name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
       (product.barcode || '').includes(searchQuery))
@@ -50,12 +64,29 @@ export default function InsurancePOS() {
   useEffect(() => { barcodeRef.current?.focus(); }, []);
 
   const addToCart = (product: Product) => {
+    if (product.stock_quantity <= 0) {
+      setPendingZeroProduct(product);
+      setShowZeroStockAlert(true);
+      return;
+    }
     const existingItem = cart.find((item) => item.product.id === product.id);
     if (existingItem) {
       if (existingItem.quantity >= product.stock_quantity) { toast({ title: 'خطأ', description: 'الكمية المطلوبة غير متوفرة في المخزون', variant: 'destructive' }); return; }
       setCart(cart.map((item) => item.product.id === product.id ? { ...item, quantity: item.quantity + 1, total: (item.quantity + 1) * item.product.sale_price } : item));
     } else {
       setCart([...cart, { product, quantity: 1, total: product.sale_price }]);
+    }
+  };
+
+  const handleQuickPurchaseSuccess = (updatedProduct: Product, qty: number) => {
+    // Add the product to cart after successful quick purchase
+    const existingItem = cart.find((item) => item.product.id === updatedProduct.id);
+    if (existingItem) {
+      setCart(cart.map((item) => item.product.id === updatedProduct.id
+        ? { ...item, product: updatedProduct, quantity: item.quantity + qty, total: (item.quantity + qty) * updatedProduct.sale_price }
+        : item));
+    } else {
+      setCart([...cart, { product: updatedProduct, quantity: qty, total: qty * updatedProduct.sale_price }]);
     }
   };
 
@@ -89,10 +120,10 @@ export default function InsurancePOS() {
     setShowCustomerDialog(true);
   };
 
-  const handleConfirmSale = async (customer: InsuranceCustomer) => {
+  const handleConfirmSale = async (customer: InsuranceCustomer, saleDate: string) => {
     try {
       const saleItems = cart.map(item => ({ product_id: item.product.id, product_name: item.product.trade_name, quantity: item.quantity, unit_price: item.product.sale_price, total: item.total }));
-      await createSale.mutateAsync({ customer_id: customer.id, customer_name: customer.name, total, items: saleItems });
+      await createSale.mutateAsync({ customer_id: customer.id, customer_name: customer.name, total, sale_date: saleDate, items: saleItems });
       for (const item of cart) { await updateStock.mutateAsync({ id: item.product.id, delta: -item.quantity }); }
       toast({ title: 'تم البيع بنجاح', description: `تم تسجيل بيع تأمين بقيمة ${total.toFixed(2)} د.ل للعميل ${customer.name}` });
       clearCart(); setShowCustomerDialog(false);
@@ -146,13 +177,15 @@ export default function InsurancePOS() {
             {showProducts ? (
               <div className="grid grid-cols-2 gap-2 md:gap-3 sm:grid-cols-3 md:grid-cols-4">
                 {filteredProducts.map((product) => (
-                  <button key={product.id} onClick={() => addToCart(product)} disabled={product.stock_quantity === 0}
-                    className={cn('rounded-lg bg-card p-3 md:p-4 text-right shadow-card transition-all hover:shadow-md hover:scale-[1.02] active:scale-[0.98]', product.stock_quantity === 0 && 'opacity-50 cursor-not-allowed')}>
+                  <button key={product.id} onClick={() => addToCart(product)}
+                    className={cn('rounded-lg bg-card p-3 md:p-4 text-right shadow-card transition-all hover:shadow-md hover:scale-[1.02] active:scale-[0.98]', product.stock_quantity === 0 && 'opacity-60 border border-warning/30')}>
                     <p className="font-medium text-card-foreground text-sm leading-tight">{product.trade_name}</p>
                     <p className="mt-1 text-xs text-muted-foreground leading-tight">{product.scientific_name}</p>
                     <div className="mt-2 flex items-center justify-between">
                       <span className="text-base md:text-lg font-bold text-primary tabular-nums">{product.sale_price.toFixed(2)}</span>
-                      <span className={cn('text-xs font-medium rounded-full px-2 py-0.5', product.stock_quantity <= product.min_stock ? 'bg-destructive/10 text-destructive' : 'bg-success/10 text-success')}>{product.stock_quantity}</span>
+                      <span className={cn('text-xs font-medium rounded-full px-2 py-0.5', product.stock_quantity <= product.min_stock ? 'bg-destructive/10 text-destructive' : 'bg-success/10 text-success')}>
+                        {formatStockDisplay(product.stock_quantity, product.units_per_package)}
+                      </span>
                     </div>
                   </button>
                 ))}
@@ -220,7 +253,32 @@ export default function InsurancePOS() {
           </div>
         </div>
       </div>
+
       <InsuranceCustomerDialog isOpen={showCustomerDialog} onClose={() => setShowCustomerDialog(false)} onConfirm={handleConfirmSale} />
+      
+      <QuickPurchaseModal
+        isOpen={!!quickPurchaseProduct}
+        onClose={() => setQuickPurchaseProduct(null)}
+        product={quickPurchaseProduct}
+        onSuccess={handleQuickPurchaseSuccess}
+      />
+
+      <AlertDialog open={showZeroStockAlert} onOpenChange={setShowZeroStockAlert}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>الكمية صفر</AlertDialogTitle>
+            <AlertDialogDescription>
+              كمية "{pendingZeroProduct?.trade_name}" صفر في المخزون. هل تريد إضافة مشتريات سريعة؟
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => { setShowZeroStockAlert(false); setPendingZeroProduct(null); }}>إلغاء</AlertDialogCancel>
+            <AlertDialogAction onClick={() => { setShowZeroStockAlert(false); setQuickPurchaseProduct(pendingZeroProduct); setPendingZeroProduct(null); }}>
+              شراء سريع
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </MainLayout>
   );
 }
