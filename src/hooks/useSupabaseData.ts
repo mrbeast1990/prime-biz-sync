@@ -387,6 +387,50 @@ export function useUpdateInvoice() {
 }
 
 // Update invoice item
+// Customer Default Medications
+export function useCustomerDefaultMedications(customerId?: string) {
+  return useQuery({
+    queryKey: ['customer_default_medications', customerId],
+    queryFn: async () => {
+      if (!customerId) return [];
+      const { data, error } = await supabase
+        .from('customer_default_medications' as any)
+        .select('*')
+        .eq('customer_id', customerId);
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!customerId,
+  });
+}
+
+export function useAddDefaultMedication() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (med: { customer_id: string; product_id: string; quantity: number }) => {
+      const { data, error } = await supabase
+        .from('customer_default_medications' as any)
+        .upsert(med, { onConflict: 'customer_id,product_id' })
+        .select()
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['customer_default_medications'] }),
+  });
+}
+
+export function useDeleteDefaultMedication() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from('customer_default_medications' as any).delete().eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['customer_default_medications'] }),
+  });
+}
+
 export function useUpdateInvoiceItem() {
   const queryClient = useQueryClient();
   return useMutation({

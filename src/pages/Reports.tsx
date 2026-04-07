@@ -9,6 +9,7 @@ import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Cell } from 'recharts';
 import { BarChart3, ShoppingCart, TrendingUp, Package, Loader2 } from 'lucide-react';
 import { useProducts, useInvoices, useInsuranceSales } from '@/hooks/useSupabaseData';
+import { formatStockDisplay } from '@/utils/stockDisplay';
 
 const COLORS = ['hsl(217, 91%, 50%)', 'hsl(142, 71%, 45%)', 'hsl(38, 92%, 50%)', 'hsl(0, 84%, 60%)', 'hsl(199, 89%, 48%)'];
 
@@ -87,7 +88,7 @@ export default function Reports() {
                     <div key={p.id} className="rounded-lg bg-muted/30 p-3 flex items-center justify-between">
                       <div>
                         <p className="font-medium text-sm">{p.trade_name}</p>
-                        <p className="text-xs text-muted-foreground">المخزون: {p.stock_quantity} | الحد: {p.min_stock}</p>
+                        <p className="text-xs text-muted-foreground">المخزون: {formatStockDisplay(p.stock_quantity, p.units_per_package)} | الحد: {formatStockDisplay(p.min_stock, p.units_per_package)}</p>
                       </div>
                       <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${p.stock_quantity <= p.min_stock ? 'bg-destructive/10 text-destructive' : 'bg-success/10 text-success'}`}>
                         {p.stock_quantity <= p.min_stock ? 'منخفض' : 'متوفر'}
@@ -103,8 +104,8 @@ export default function Reports() {
                       {products.map(p => (
                         <TableRow key={p.id}>
                           <TableCell className="font-medium">{p.trade_name}</TableCell>
-                          <TableCell>{p.stock_quantity}</TableCell>
-                          <TableCell>{p.min_stock}</TableCell>
+                          <TableCell>{formatStockDisplay(p.stock_quantity, p.units_per_package)}</TableCell>
+                          <TableCell>{formatStockDisplay(p.min_stock, p.units_per_package)}</TableCell>
                           <TableCell>
                             <span className={`inline-block rounded-full px-3 py-1 text-xs font-medium ${p.stock_quantity <= p.min_stock ? 'bg-destructive/10 text-destructive' : 'bg-success/10 text-success'}`}>
                               {p.stock_quantity <= p.min_stock ? 'منخفض' : 'متوفر'}

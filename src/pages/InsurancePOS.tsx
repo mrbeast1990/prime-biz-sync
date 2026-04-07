@@ -4,14 +4,14 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import {
-  Barcode, Search, Plus, Minus, Trash2, Banknote, ShoppingCart, X, Shield, Loader2, Zap,
+  Barcode, Search, Plus, Minus, Trash2, Banknote, ShoppingCart, X, Shield, Loader2, Zap, Users,
 } from 'lucide-react';
 import { Product, CartItem, InsuranceCustomer } from '@/types';
 import { cn } from '@/lib/utils';
 import { toast } from '@/hooks/use-toast';
 import { InsuranceCustomerDialog } from '@/components/insurance/InsuranceCustomerDialog';
 import { QuickPurchaseModal } from '@/components/insurance/QuickPurchaseModal';
-import { useProducts, useCreateInsuranceSale, useUpdateProductStock } from '@/hooks/useSupabaseData';
+import { useProducts, useCreateInsuranceSale, useUpdateProductStock, useInsuranceCustomers, useCustomerDefaultMedications } from '@/hooks/useSupabaseData';
 import { formatStockDisplay } from '@/utils/stockDisplay';
 import {
   AlertDialog,
@@ -23,11 +23,18 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 
 const DRAFT_KEY = 'insurance_pos_draft';
 
 export default function InsurancePOS() {
   const { data: products = [], isLoading } = useProducts();
+  const { data: insuranceCustomers = [] } = useInsuranceCustomers();
   const createSale = useCreateInsuranceSale();
   const updateStock = useUpdateProductStock();
 
@@ -38,7 +45,37 @@ export default function InsurancePOS() {
   const [quickPurchaseProduct, setQuickPurchaseProduct] = useState<Product | null>(null);
   const [showZeroStockAlert, setShowZeroStockAlert] = useState(false);
   const [pendingZeroProduct, setPendingZeroProduct] = useState<Product | null>(null);
+  const [showCustomerList, setShowCustomerList] = useState(false);
+  const [customerSearchQuery, setCustomerSearchQuery] = useState('');
+  const [selectedCustomerForMeds, setSelectedCustomerForMeds] = useState<string | null>(null);
   const barcodeRef = useRef<HTMLInputElement>(null);
+
+  // Fetch default medications for selected customer
+  const { data: defaultMeds = [] } = useCustomerDefaultMedications(selectedCustomerForMeds || undefined);
+
+  // Auto-fill cart when customer meds are loaded
+  useEffect(() => {
+    if (selectedCustomerForMeds && (defaultMeds as any[]).length > 0) {
+      const newItems: CartItem[] = [];
+      for (const med of defaultMeds as any[]) {
+        const product = products.find(p => p.id === med.product_id);
+        if (!product) continue;
+        const existingInCart = cart.find(item => item.product.id === product.id);
+        if (existingInCart) continue; // skip if already in cart
+        newItems.push({
+          product,
+          quantity: med.quantity,
+          total: med.quantity * product.sale_price,
+        });
+      }
+      if (newItems.length > 0) {
+        setCart(prev => [...prev, ...newItems]);
+        toast({ title: 'تم تحميل العلاج', description: `تمت إضافة ${newItems.length} أدوية افتراضية` });
+      }
+      setSelectedCustomerForMeds(null);
+      setShowCustomerList(false);
+    }
+  }, [defaultMeds, selectedCustomerForMeds]);
 
   useEffect(() => {
     try {
@@ -61,6 +98,10 @@ export default function InsurancePOS() {
       (product.barcode || '').includes(searchQuery))
   ) : [];
 
+  const filteredCustomersList = customerSearchQuery.length > 0
+    ? insuranceCustomers.filter(c => c.name.includes(customerSearchQuery) || (c.card_number || '').includes(customerSearchQuery))
+    : insuranceCustomers;
+
   useEffect(() => { barcodeRef.current?.focus(); }, []);
 
   const addToCart = (product: Product) => {
@@ -79,7 +120,6 @@ export default function InsurancePOS() {
   };
 
   const handleQuickPurchaseSuccess = (updatedProduct: Product, qty: number) => {
-    // Add the product to cart after successful quick purchase
     const existingItem = cart.find((item) => item.product.id === updatedProduct.id);
     if (existingItem) {
       setCart(cart.map((item) => item.product.id === updatedProduct.id
@@ -163,12 +203,18 @@ export default function InsurancePOS() {
 
       <div className="grid h-[calc(100vh-12rem)] grid-cols-1 gap-4 md:gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2 flex flex-col">
-          <form onSubmit={handleBarcodeSubmit} className="mb-3 md:mb-4">
-            <div className="relative">
-              <Barcode className="absolute right-3 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
-              <Input ref={barcodeRef} value={barcodeInput} onChange={(e) => setBarcodeInput(e.target.value)} placeholder="امسح الباركود هنا..." className="pr-10 h-11 md:h-12 text-base md:text-lg font-mono input-focus" />
-            </div>
-          </form>
+          <div className="flex gap-2 mb-3 md:mb-4">
+            <form onSubmit={handleBarcodeSubmit} className="flex-1">
+              <div className="relative">
+                <Barcode className="absolute right-3 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
+                <Input ref={barcodeRef} value={barcodeInput} onChange={(e) => setBarcodeInput(e.target.value)} placeholder="امسح الباركود هنا..." className="pr-10 h-11 md:h-12 text-base md:text-lg font-mono input-focus" />
+              </div>
+            </form>
+            <Button variant="outline" className="h-11 md:h-12 gap-2 shrink-0" onClick={() => setShowCustomerList(true)}>
+              <Users className="h-4 w-4" />
+              <span className="hidden sm:inline">اختر عميل</span>
+            </Button>
+          </div>
           <div className="relative mb-3 md:mb-4">
             <Search className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="بحث عن منتج..." className="pr-9 input-focus" />
@@ -279,6 +325,30 @@ export default function InsurancePOS() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Customer list dialog for auto-filling default medications */}
+      <Dialog open={showCustomerList} onOpenChange={setShowCustomerList}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader><DialogTitle className="flex items-center gap-2"><Users className="h-5 w-5 text-primary" /> اختر عميل من القائمة</DialogTitle></DialogHeader>
+          <div className="relative mb-3">
+            <Search className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input value={customerSearchQuery} onChange={e => setCustomerSearchQuery(e.target.value)} placeholder="بحث بالاسم أو رقم البطاقة..." className="pr-9" />
+          </div>
+          <div className="max-h-64 overflow-y-auto space-y-2">
+            {filteredCustomersList.map(customer => (
+              <button
+                key={customer.id}
+                onClick={() => setSelectedCustomerForMeds(customer.id)}
+                className="w-full rounded-lg border border-border p-3 text-right transition-colors hover:bg-muted/50 hover:border-primary/50"
+              >
+                <p className="font-medium text-card-foreground">{customer.name}</p>
+                <p className="text-xs text-muted-foreground">{customer.card_number || ''} • {customer.phone || ''}</p>
+              </button>
+            ))}
+            {filteredCustomersList.length === 0 && <p className="text-center py-4 text-sm text-muted-foreground">لا يوجد عملاء</p>}
+          </div>
+        </DialogContent>
+      </Dialog>
     </MainLayout>
   );
 }
