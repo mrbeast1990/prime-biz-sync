@@ -50,6 +50,45 @@ export type Database = {
         }
         Relationships: []
       }
+      customer_default_medications: {
+        Row: {
+          created_at: string
+          customer_id: string
+          id: string
+          product_id: string
+          quantity: number
+        }
+        Insert: {
+          created_at?: string
+          customer_id: string
+          id?: string
+          product_id: string
+          quantity?: number
+        }
+        Update: {
+          created_at?: string
+          customer_id?: string
+          id?: string
+          product_id?: string
+          quantity?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_default_medications_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "insurance_customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_default_medications_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       insurance_customers: {
         Row: {
           balance: number
