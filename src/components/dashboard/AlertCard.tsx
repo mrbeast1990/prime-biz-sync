@@ -1,6 +1,7 @@
 import { AlertTriangle, Clock, Package } from 'lucide-react';
 import { Product } from '@/types';
 import { cn } from '@/lib/utils';
+import { formatStockDisplay } from '@/utils/stockDisplay';
 
 interface AlertCardProps {
   title: string;
@@ -58,7 +59,7 @@ export function AlertCard({ title, type, products }: AlertCardProps) {
                       product.stock_quantity <= 5 ? 'bg-destructive/10 text-destructive' : 'bg-warning/10 text-warning'
                     )}
                   >
-                    {product.stock_quantity} قطعة
+                    {formatStockDisplay(product.stock_quantity, product.units_per_package)}
                   </span>
                 ) : (
                   <span className="inline-flex items-center rounded-full bg-warning/10 px-2.5 py-1 text-xs font-medium text-warning">

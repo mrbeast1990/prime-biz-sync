@@ -5,9 +5,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { Search, Edit, Users, Loader2 } from 'lucide-react';
+import { Search, Edit, Users, Loader2, Pill } from 'lucide-react';
 import { InsuranceCustomer } from '@/types';
 import { useInsuranceCustomers, useInsuranceSales, useUpdateInsuranceCustomer } from '@/hooks/useSupabaseData';
+import { DefaultMedicationsDialog } from '@/components/insurance/DefaultMedicationsDialog';
 
 export default function InsuranceCustomers() {
   const { data: customers = [], isLoading } = useInsuranceCustomers();
@@ -17,6 +18,7 @@ export default function InsuranceCustomers() {
   const [searchQuery, setSearchQuery] = useState('');
   const [editCustomer, setEditCustomer] = useState<InsuranceCustomer | null>(null);
   const [editForm, setEditForm] = useState({ name: '', card_number: '', phone: '' });
+  const [medsCustomer, setMedsCustomer] = useState<InsuranceCustomer | null>(null);
 
   const filtered = customers.filter(
     (c) => c.name.includes(searchQuery) || (c.card_number || '').includes(searchQuery) || (c.phone || '').includes(searchQuery)
@@ -63,7 +65,10 @@ export default function InsuranceCustomers() {
             <div key={customer.id} className="rounded-xl bg-card p-4 shadow-card">
               <div className="flex items-center justify-between">
                 <p className="font-medium text-card-foreground">{customer.name}</p>
-                <Button variant="ghost" size="icon" onClick={() => openEdit(customer)}><Edit className="h-4 w-4" /></Button>
+                <div className="flex gap-1">
+                  <Button variant="ghost" size="icon" onClick={() => setMedsCustomer(customer)} title="العلاج الافتراضي"><Pill className="h-4 w-4 text-primary" /></Button>
+                  <Button variant="ghost" size="icon" onClick={() => openEdit(customer)}><Edit className="h-4 w-4" /></Button>
+                </div>
               </div>
               <div className="mt-2 grid grid-cols-2 gap-2 text-sm">
                 <div><span className="text-muted-foreground text-xs">رقم البطاقة</span><p>{customer.card_number || '—'}</p></div>
@@ -92,7 +97,12 @@ export default function InsuranceCustomers() {
                   <TableCell>{getSalesCount(customer.id)}</TableCell>
                   <TableCell className="tabular-nums">{getTotalSpent(customer.id).toFixed(2)} د.ل</TableCell>
                   <TableCell>{new Date(customer.created_at).toLocaleDateString('en-GB')}</TableCell>
-                  <TableCell><Button variant="ghost" size="icon" onClick={() => openEdit(customer)}><Edit className="h-4 w-4" /></Button></TableCell>
+                  <TableCell>
+                    <div className="flex gap-1">
+                      <Button variant="ghost" size="icon" onClick={() => setMedsCustomer(customer)} title="العلاج الافتراضي"><Pill className="h-4 w-4 text-primary" /></Button>
+                      <Button variant="ghost" size="icon" onClick={() => openEdit(customer)}><Edit className="h-4 w-4" /></Button>
+                    </div>
+                  </TableCell>
                 </TableRow>
               ))}
               {filtered.length === 0 && <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">لا يوجد عملاء</TableCell></TableRow>}
@@ -115,6 +125,15 @@ export default function InsuranceCustomers() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {medsCustomer && (
+        <DefaultMedicationsDialog
+          isOpen={!!medsCustomer}
+          onClose={() => setMedsCustomer(null)}
+          customerId={medsCustomer.id}
+          customerName={medsCustomer.name}
+        />
+      )}
     </MainLayout>
   );
 }

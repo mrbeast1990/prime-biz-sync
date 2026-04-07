@@ -40,7 +40,12 @@ export default function Dashboard() {
     return expiryDate <= threeMonthsFromNow;
   });
 
-  const stockValue = products.reduce((sum, p) => sum + p.cost_price * p.stock_quantity, 0);
+  // cost_price is per package, stock_quantity is in units (strips)
+  const stockValue = products.reduce((sum, p) => {
+    const upp = p.units_per_package || 1;
+    const costPerUnit = p.cost_price / upp;
+    return sum + costPerUnit * p.stock_quantity;
+  }, 0);
   
   // Calculate net profit: for each sold item, (sale_price - cost_price) * quantity
   const netProfit = allSaleItems.reduce((sum, item: any) => {
