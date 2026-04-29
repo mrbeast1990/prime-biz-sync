@@ -108,38 +108,49 @@ export default function Auth() {
         </CardHeader>
         <CardContent>
           {!selected ? (
-            <div className="space-y-2 max-h-[60vh] overflow-y-auto custom-scrollbar">
-              {loadingList ? (
-                <div className="flex justify-center py-8">
-                  <Loader2 className="h-6 w-6 animate-spin text-primary" />
-                </div>
-              ) : users.length === 0 ? (
-                <p className="text-center text-sm text-muted-foreground py-6">لا يوجد مستخدمون</p>
-              ) : (
-                users.map((u) => (
-                  <button
-                    key={u.user_id}
-                    onClick={() => setSelected(u)}
-                    disabled={!u.has_pin}
-                    className={cn(
-                      'w-full flex items-center gap-3 rounded-lg border bg-card p-3 text-right transition-colors',
-                      u.has_pin
-                        ? 'hover:bg-accent hover:border-primary cursor-pointer'
-                        : 'opacity-60 cursor-not-allowed'
-                    )}
-                  >
-                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary">
-                      <UserIcon className="h-5 w-5" />
-                    </div>
-                    <div className="flex-1">
-                      <p className="font-medium">{u.display_name || 'بدون اسم'}</p>
-                      {!u.has_pin && (
-                        <p className="text-xs text-muted-foreground">لم يتم تعيين PIN</p>
+            <div className="space-y-3">
+              <div className="space-y-2 max-h-[50vh] overflow-y-auto custom-scrollbar">
+                {loadingList ? (
+                  <div className="flex justify-center py-8">
+                    <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                  </div>
+                ) : users.length === 0 ? (
+                  <p className="text-center text-sm text-muted-foreground py-6">لا يوجد مستخدمون</p>
+                ) : (
+                  users.map((u) => (
+                    <button
+                      key={u.user_id}
+                      onClick={() => u.has_pin && setSelected(u)}
+                      disabled={!u.has_pin}
+                      className={cn(
+                        'w-full flex items-center gap-3 rounded-lg border bg-card p-3 text-right transition-colors',
+                        u.has_pin
+                          ? 'hover:bg-accent hover:border-primary cursor-pointer'
+                          : 'opacity-60 cursor-not-allowed'
                       )}
-                    </div>
-                  </button>
-                ))
-              )}
+                    >
+                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary">
+                        <UserIcon className="h-5 w-5" />
+                      </div>
+                      <div className="flex-1">
+                        <p className="font-medium">{u.display_name || 'بدون اسم'}</p>
+                        {!u.has_pin && (
+                          <p className="text-xs text-muted-foreground">لم يتم تعيين PIN</p>
+                        )}
+                      </div>
+                    </button>
+                  ))
+                )}
+              </div>
+              <Button
+                type="button"
+                variant="link"
+                size="sm"
+                className="w-full"
+                onClick={() => navigate('/auth?mode=password')}
+              >
+                دخول بكلمة المرور (للمدير)
+              </Button>
             </div>
           ) : (
             <div className="space-y-6">
