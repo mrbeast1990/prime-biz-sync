@@ -18,47 +18,48 @@
 
 @layer base {
   :root {
-    /* Core backgrounds */
-    --background: 210 20% 98%;
-    --foreground: 220 25% 10%;
+    /* Core backgrounds - Regalia clean white */
+    --background: 0 0% 100%;
+    --foreground: 220 30% 12%;
 
     /* Cards and surfaces */
     --card: 0 0% 100%;
-    --card-foreground: 220 25% 10%;
+    --card-foreground: 220 30% 12%;
 
     /* Popovers */
     --popover: 0 0% 100%;
-    --popover-foreground: 220 25% 10%;
+    --popover-foreground: 220 30% 12%;
 
-    /* Primary - Professional Blue */
-    --primary: 217 91% 50%;
+    /* Primary - Vibrant Blue (Regalia accent) */
+    --primary: 211 100% 50%;
     --primary-foreground: 0 0% 100%;
-    --primary-light: 217 91% 95%;
-    --primary-dark: 217 91% 40%;
+    --primary-light: 211 100% 95%;
+    --primary-dark: 211 100% 42%;
 
     /* Secondary - Soft Gray */
-    --secondary: 210 20% 96%;
+    --secondary: 210 20% 97%;
     --secondary-foreground: 220 25% 25%;
 
     /* Muted elements */
-    --muted: 210 20% 94%;
+    --muted: 210 20% 96%;
     --muted-foreground: 215 16% 47%;
 
-    /* Accent - Lighter Blue */
-    --accent: 217 91% 97%;
-    --accent-foreground: 217 91% 40%;
+    /* Accent - Light Blue surface */
+    --accent: 211 100% 96%;
+    --accent-foreground: 211 100% 42%;
 
     /* Semantic colors */
-    --destructive: 0 84% 60%;
+    --destructive: 354 70% 54%;
     --destructive-foreground: 0 0% 100%;
     
     --success: 142 71% 45%;
     --success-foreground: 0 0% 100%;
     --success-light: 142 71% 95%;
     
-    --warning: 38 92% 50%;
+    /* Warning - Regalia golden orange (used for highlight numbers) */
+    --warning: 38 100% 48%;
     --warning-foreground: 0 0% 100%;
-    --warning-light: 38 92% 95%;
+    --warning-light: 38 100% 95%;
     
     --info: 199 89% 48%;
     --info-foreground: 0 0% 100%;
@@ -67,24 +68,28 @@
     /* Borders and inputs */
     --border: 214 32% 91%;
     --input: 214 32% 91%;
-    --ring: 217 91% 50%;
+    --ring: 211 100% 50%;
 
     --radius: 0.75rem;
 
-    /* Sidebar */
-    --sidebar-background: 220 25% 12%;
-    --sidebar-foreground: 210 20% 90%;
-    --sidebar-primary: 217 91% 60%;
+    /* Sidebar - Regalia deep navy */
+    --sidebar-background: 222 47% 11%;
+    --sidebar-foreground: 0 0% 100%;
+    --sidebar-primary: 211 100% 55%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 220 25% 18%;
-    --sidebar-accent-foreground: 210 20% 95%;
-    --sidebar-border: 220 25% 20%;
-    --sidebar-ring: 217 91% 60%;
+    --sidebar-accent: 222 40% 18%;
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 222 40% 20%;
+    --sidebar-ring: 211 100% 55%;
+
+    /* Highlight number color (Regalia golden) */
+    --highlight: 38 100% 48%;
+    --highlight-foreground: 220 30% 12%;
 
     /* Gradients */
-    --gradient-primary: linear-gradient(135deg, hsl(217 91% 50%) 0%, hsl(217 91% 60%) 100%);
+    --gradient-primary: linear-gradient(135deg, hsl(211 100% 50%) 0%, hsl(211 100% 60%) 100%);
     --gradient-success: linear-gradient(135deg, hsl(142 71% 45%) 0%, hsl(142 71% 55%) 100%);
-    --gradient-warning: linear-gradient(135deg, hsl(38 92% 50%) 0%, hsl(38 92% 60%) 100%);
+    --gradient-warning: linear-gradient(135deg, hsl(38 100% 48%) 0%, hsl(38 100% 58%) 100%);
     --gradient-card: linear-gradient(180deg, hsl(0 0% 100%) 0%, hsl(210 20% 99%) 100%);
 
     /* Shadows */
