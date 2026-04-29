@@ -126,7 +126,24 @@ export default function Auth() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {!selected ? (
+          {passwordMode ? (
+            <form onSubmit={handlePasswordLogin} className="space-y-4">
+              <div className="space-y-2">
+                <Label>اسم المستخدم</Label>
+                <Input value={pwUsername} onChange={e => setPwUsername(e.target.value)} required />
+              </div>
+              <div className="space-y-2">
+                <Label>كلمة المرور</Label>
+                <Input type="password" value={pwPassword} onChange={e => setPwPassword(e.target.value)} required />
+              </div>
+              <Button type="submit" className="w-full" disabled={loading}>
+                {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'دخول'}
+              </Button>
+              <Button type="button" variant="link" size="sm" className="w-full" onClick={() => navigate('/auth')}>
+                العودة لتسجيل الدخول بـ PIN
+              </Button>
+            </form>
+          ) : !selected ? (
             <div className="space-y-3">
               <div className="space-y-2 max-h-[50vh] overflow-y-auto custom-scrollbar">
                 {loadingList ? (
