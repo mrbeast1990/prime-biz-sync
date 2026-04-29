@@ -27,11 +27,28 @@ async function derivePassword(userId: string, pin: string): Promise<string> {
 
 export default function Auth() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const passwordMode = searchParams.get('mode') === 'password';
   const [users, setUsers] = useState<DirEntry[]>([]);
   const [selected, setSelected] = useState<DirEntry | null>(null);
   const [pin, setPin] = useState('');
   const [loading, setLoading] = useState(false);
   const [loadingList, setLoadingList] = useState(true);
+  const [pwUsername, setPwUsername] = useState('');
+  const [pwPassword, setPwPassword] = useState('');
+
+  const handlePasswordLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    const email = pwUsername.includes('@') ? pwUsername : `${pwUsername}@app.local`;
+    const { error } = await supabase.auth.signInWithPassword({ email, password: pwPassword });
+    setLoading(false);
+    if (error) {
+      toast({ title: 'خطأ', description: 'بيانات غير صحيحة', variant: 'destructive' });
+    } else {
+      navigate('/');
+    }
+  };
 
   useEffect(() => {
     (async () => {
