@@ -475,6 +475,7 @@ export type Database = {
           created_at: string
           display_name: string | null
           id: string
+          pin_hash: string | null
           updated_at: string
           user_id: string
         }
@@ -482,6 +483,7 @@ export type Database = {
           created_at?: string
           display_name?: string | null
           id?: string
+          pin_hash?: string | null
           updated_at?: string
           user_id: string
         }
@@ -489,6 +491,7 @@ export type Database = {
           created_at?: string
           display_name?: string | null
           id?: string
+          pin_hash?: string | null
           updated_at?: string
           user_id?: string
         }
@@ -574,7 +577,24 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      user_directory: {
+        Row: {
+          display_name: string | null
+          has_pin: boolean | null
+          user_id: string | null
+        }
+        Insert: {
+          display_name?: string | null
+          has_pin?: never
+          user_id?: string | null
+        }
+        Update: {
+          display_name?: string | null
+          has_pin?: never
+          user_id?: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       has_role: {
@@ -586,6 +606,14 @@ export type Database = {
       }
       is_admin: { Args: never; Returns: boolean }
       is_manager_or_admin: { Args: never; Returns: boolean }
+      set_user_pin: {
+        Args: { _pin: string; _user_id: string }
+        Returns: undefined
+      }
+      verify_user_pin: {
+        Args: { _pin: string; _user_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
       app_role: "admin" | "manager" | "user"
