@@ -79,8 +79,11 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Save pin_hash via SQL function
-    await supabaseAdmin.rpc("set_user_pin", { _user_id: target_user_id, _pin: pin });
+    // Mark profile as having a PIN (placeholder hash; real verification is via auth password)
+    await supabaseAdmin
+      .from("profiles")
+      .update({ pin_hash: "set", updated_at: new Date().toISOString() })
+      .eq("user_id", target_user_id);
 
     return new Response(JSON.stringify({ success: true }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
