@@ -57,7 +57,11 @@ function openPrintWindow(html: string) {
   if (!w) return;
   w.document.write(html);
   w.document.close();
-  w.onload = () => { w.print(); };
+  w.onload = async () => {
+    const imgs = Array.from(w.document.images);
+    await Promise.all(imgs.map(img => img.complete ? Promise.resolve() : new Promise(res => { img.onload = img.onerror = () => res(null); })));
+    w.print();
+  };
 }
 
 function getTemplateColors(template?: string) {
