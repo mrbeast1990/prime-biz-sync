@@ -57,7 +57,11 @@ function openPrintWindow(html: string) {
   if (!w) return;
   w.document.write(html);
   w.document.close();
-  w.onload = () => { w.print(); };
+  w.onload = async () => {
+    const imgs = Array.from(w.document.images);
+    await Promise.all(imgs.map(img => img.complete ? Promise.resolve() : new Promise(res => { img.onload = img.onerror = () => res(null); })));
+    w.print();
+  };
 }
 
 function getTemplateColors(template?: string) {
@@ -71,7 +75,8 @@ function getTemplateColors(template?: string) {
 function buildPage(settings: PharmacySettings, title: string, body: string) {
   const colors = getTemplateColors(settings.invoiceTemplate);
   const pharmacyLogo = settings.logo ? `<img src="${settings.logo}" alt="logo" style="height:180px;max-width:350px;object-fit:contain" />` : `<div style="font-size:24px;font-weight:700;color:${colors.primary}">${settings.name}</div>`;
-  const phifLogo = `<img src="/phif-logo.png" alt="PHIF" style="height:100px;max-width:250px;object-fit:contain" />`;
+  const phifLogoUrl = `${window.location.origin}/phif-logo.png`;
+  const phifLogo = `<img src="${phifLogoUrl}" alt="PHIF" crossorigin="anonymous" style="height:100px;max-width:250px;object-fit:contain" />`;
   
   return `<!DOCTYPE html>
 <html dir="rtl" lang="ar">
