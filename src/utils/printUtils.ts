@@ -52,16 +52,43 @@ const invoiceTypeLabel = (t: string) => {
   return map[t] || 'فاتورة';
 };
 
-function openPrintWindow(html: string) {
+function imageToDataUrl(url: string): Promise<string> {
+  return fetch(url, { cache: 'no-store' })
+    .then((response) => response.blob())
+    .then((blob) => new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(String(reader.result));
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    }))
+    .catch(() => url);
+}
+
+function waitForPrintImages(w: Window) {
+  const imgs = Array.from(w.document.images);
+  return Promise.all(imgs.map(img => (
+    img.complete && img.naturalWidth > 0
+      ? Promise.resolve(null)
+      : new Promise(res => { img.onload = img.onerror = () => res(null); })
+  )));
+}
+
+function openPrintWindow(html: string | Promise<string>) {
   const w = window.open('', '_blank', 'width=800,height=600');
   if (!w) return;
-  w.document.write(html);
+
+  w.document.write('<!DOCTYPE html><html dir="rtl"><head><meta charset="utf-8"/></head><body style="font-family:sans-serif;padding:24px">جاري تجهيز الطباعة...</body></html>');
   w.document.close();
-  w.onload = async () => {
-    const imgs = Array.from(w.document.images);
-    await Promise.all(imgs.map(img => img.complete ? Promise.resolve() : new Promise(res => { img.onload = img.onerror = () => res(null); })));
+
+  Promise.resolve(html).then(async (content) => {
+    w.document.open();
+    w.document.write(content);
+    w.document.close();
+    await waitForPrintImages(w);
+    await new Promise(res => setTimeout(res, 400));
+    w.focus();
     w.print();
-  };
+  });
 }
 
 function getTemplateColors(template?: string) {
@@ -72,11 +99,12 @@ function getTemplateColors(template?: string) {
   }
 }
 
-function buildPage(settings: PharmacySettings, title: string, body: string) {
+async function buildPage(settings: PharmacySettings, title: string, body: string) {
   const colors = getTemplateColors(settings.invoiceTemplate);
   const pharmacyLogo = settings.logo ? `<img src="${settings.logo}" alt="logo" style="height:180px;max-width:350px;object-fit:contain" />` : `<div style="font-size:24px;font-weight:700;color:${colors.primary}">${settings.name}</div>`;
   const phifLogoUrl = `${window.location.origin}/phif-logo.png`;
-  const phifLogo = `<img src="${phifLogoUrl}" alt="PHIF" crossorigin="anonymous" style="height:100px;max-width:250px;object-fit:contain" />`;
+  const phifLogoSrc = await imageToDataUrl(phifLogoUrl);
+  const phifLogo = `<img src="${phifLogoSrc}" alt="PHIF" style="height:100px;max-width:250px;object-fit:contain" />`;
   
   return `<!DOCTYPE html>
 <html dir="rtl" lang="ar">
