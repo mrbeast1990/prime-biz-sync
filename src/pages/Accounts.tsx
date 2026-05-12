@@ -127,12 +127,17 @@ export default function Accounts() {
     return (
       <div className="space-y-3 md:hidden">
         {list.map(c => (
-          <div key={c.id} className="rounded-xl bg-card p-4 shadow-card cursor-pointer active:scale-[0.98] transition-transform" onClick={() => openInsurance(c)}>
+          <div key={c.id} className="rounded-xl bg-card p-4 shadow-card">
             <div className="flex items-center justify-between">
-              <p className="font-medium text-card-foreground">{c.name}</p>
-              <span className="tabular-nums font-medium">{getInsuranceSalesTotal(c.id).toFixed(2)} د.ل</span>
+              <p className="font-medium text-card-foreground cursor-pointer flex-1" onClick={() => openInsurance(c)}>{c.name}</p>
+              <div className="flex items-center gap-2">
+                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); setMedsCustomer(c); }} title="العلاج الافتراضي">
+                  <Pill className="h-4 w-4 text-primary" />
+                </Button>
+                <span className="tabular-nums font-medium" onClick={() => openInsurance(c)}>{getInsuranceSalesTotal(c.id).toFixed(2)} د.ل</span>
+              </div>
             </div>
-            <div className="mt-1 text-sm text-muted-foreground flex gap-3">
+            <div className="mt-1 text-sm text-muted-foreground flex gap-3 cursor-pointer" onClick={() => openInsurance(c)}>
               {c.card_number && <span>{c.card_number}</span>}
               {c.phone && <span dir="ltr">{c.phone}</span>}
             </div>
