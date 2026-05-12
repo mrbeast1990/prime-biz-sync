@@ -1,0 +1,1 @@
+ALTER TABLE public.contacts ADD COLUMN IF NOT EXISTS is_insurance boolean NOT NULL DEFAULT false;
