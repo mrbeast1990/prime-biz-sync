@@ -247,6 +247,15 @@ export default function Accounts() {
         type={dialogType}
       />
 
+      {medsCustomer && (
+        <DefaultMedicationsDialog
+          isOpen={!!medsCustomer}
+          onClose={() => setMedsCustomer(null)}
+          customerId={medsCustomer.id}
+          customerName={medsCustomer.name}
+        />
+      )}
+
       {/* Add Dialog */}
       <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
         <DialogContent className="sm:max-w-md">
