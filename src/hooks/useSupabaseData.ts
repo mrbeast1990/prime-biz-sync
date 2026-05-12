@@ -108,7 +108,8 @@ export function useCreateContact() {
         email: contact.email || null,
         address: contact.address || null,
         balance: contact.balance || 0,
-      }).select().single();
+        is_insurance: contact.is_insurance || false,
+      } as any).select().single();
       if (error) throw error;
       return data as Contact;
     },
@@ -120,8 +121,8 @@ export function useCreateContact() {
 export function useUpdateContact() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ id, ...data }: { id: string; name?: string; phone?: string; address?: string }) => {
-      const { error } = await supabase.from('contacts').update(data).eq('id', id);
+    mutationFn: async ({ id, ...data }: { id: string; name?: string; phone?: string; address?: string; is_insurance?: boolean }) => {
+      const { error } = await supabase.from('contacts').update(data as any).eq('id', id);
       if (error) throw error;
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['contacts'] }),
