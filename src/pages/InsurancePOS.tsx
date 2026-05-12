@@ -51,31 +51,36 @@ export default function InsurancePOS() {
   const barcodeRef = useRef<HTMLInputElement>(null);
 
   // Fetch default medications for selected customer
-  const { data: defaultMeds = [] } = useCustomerDefaultMedications(selectedCustomerForMeds || undefined);
+  const { data: defaultMeds = [], isFetching: isFetchingMeds } = useCustomerDefaultMedications(selectedCustomerForMeds || undefined);
 
   // Auto-fill cart when customer meds are loaded
   useEffect(() => {
-    if (selectedCustomerForMeds && (defaultMeds as any[]).length > 0) {
-      const newItems: CartItem[] = [];
-      for (const med of defaultMeds as any[]) {
-        const product = products.find(p => p.id === med.product_id);
-        if (!product) continue;
-        const existingInCart = cart.find(item => item.product.id === product.id);
-        if (existingInCart) continue; // skip if already in cart
-        newItems.push({
-          product,
-          quantity: med.quantity,
-          total: med.quantity * product.sale_price,
-        });
-      }
-      if (newItems.length > 0) {
-        setCart(prev => [...prev, ...newItems]);
-        toast({ title: 'تم تحميل العلاج', description: `تمت إضافة ${newItems.length} أدوية افتراضية` });
-      }
+    if (!selectedCustomerForMeds || isFetchingMeds) return;
+    const meds = defaultMeds as any[];
+    if (meds.length === 0) {
+      toast({ title: 'لا توجد وصفة افتراضية', description: 'هذا العميل ليس لديه علاج افتراضي محفوظ', variant: 'destructive' });
       setSelectedCustomerForMeds(null);
       setShowCustomerList(false);
+      return;
     }
-  }, [defaultMeds, selectedCustomerForMeds]);
+    const newItems: CartItem[] = [];
+    let skipped = 0;
+    for (const med of meds) {
+      const product = products.find(p => p.id === med.product_id);
+      if (!product) { skipped++; continue; }
+      const existingInCart = cart.find(item => item.product.id === product.id);
+      if (existingInCart) { skipped++; continue; }
+      newItems.push({ product, quantity: med.quantity, total: med.quantity * product.sale_price });
+    }
+    if (newItems.length > 0) {
+      setCart(prev => [...prev, ...newItems]);
+      toast({ title: 'تم تحميل العلاج', description: `تمت إضافة ${newItems.length} صنف${skipped ? ` (تم تخطي ${skipped})` : ''}` });
+    } else {
+      toast({ title: 'تنبيه', description: 'جميع أصناف الوصفة موجودة بالسلة بالفعل' });
+    }
+    setSelectedCustomerForMeds(null);
+    setShowCustomerList(false);
+  }, [defaultMeds, selectedCustomerForMeds, isFetchingMeds]);
 
   useEffect(() => {
     try {
