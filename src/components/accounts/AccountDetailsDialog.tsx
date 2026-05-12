@@ -120,7 +120,7 @@ export function AccountDetailsDialog({ isOpen, onClose, contact, insuranceCustom
   const updateInsuranceCustomer = useUpdateInsuranceCustomer();
 
   const [editing, setEditing] = useState(false);
-  const [form, setForm] = useState({ name: '', phone: '', address: '', card_number: '' });
+  const [form, setForm] = useState({ name: '', phone: '', address: '', card_number: '', is_insurance: false });
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [editingTransactionId, setEditingTransactionId] = useState<string | null>(null);
   
@@ -135,9 +135,9 @@ export function AccountDetailsDialog({ isOpen, onClose, contact, insuranceCustom
 
   const startEdit = () => {
     if (type === 'insurance' && insuranceCustomer) {
-      setForm({ name: insuranceCustomer.name, phone: insuranceCustomer.phone || '', address: '', card_number: insuranceCustomer.card_number || '' });
+      setForm({ name: insuranceCustomer.name, phone: insuranceCustomer.phone || '', address: '', card_number: insuranceCustomer.card_number || '', is_insurance: false });
     } else if (contact) {
-      setForm({ name: contact.name, phone: contact.phone || '', address: contact.address || '', card_number: '' });
+      setForm({ name: contact.name, phone: contact.phone || '', address: contact.address || '', card_number: '', is_insurance: !!contact.is_insurance });
     }
     setEditing(true);
   };
@@ -147,7 +147,7 @@ export function AccountDetailsDialog({ isOpen, onClose, contact, insuranceCustom
       if (type === 'insurance' && insuranceCustomer) {
         await updateInsuranceCustomer.mutateAsync({ id: insuranceCustomer.id, name: form.name, phone: form.phone, card_number: form.card_number });
       } else if (contact) {
-        await updateContact.mutateAsync({ id: contact.id, name: form.name, phone: form.phone, address: form.address });
+        await updateContact.mutateAsync({ id: contact.id, name: form.name, phone: form.phone, address: form.address, is_insurance: type === 'supplier' ? form.is_insurance : undefined });
       }
       setEditing(false);
       toast({ title: 'تم الحفظ', description: 'تم تحديث البيانات بنجاح' });
@@ -511,6 +511,15 @@ export function AccountDetailsDialog({ isOpen, onClose, contact, insuranceCustom
                 <div><Label>الهاتف</Label><Input value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} /></div>
                 {type !== 'insurance' && <div><Label>العنوان</Label><Input value={form.address} onChange={e => setForm({ ...form, address: e.target.value })} /></div>}
                 {type === 'insurance' && <div><Label>رقم البطاقة</Label><Input value={form.card_number} onChange={e => setForm({ ...form, card_number: e.target.value })} /></div>}
+                {type === 'supplier' && (
+                  <label className="flex items-center justify-between rounded-lg border border-border p-3 cursor-pointer">
+                    <div>
+                      <p className="text-sm font-medium">شركة تأمين</p>
+                      <p className="text-xs text-muted-foreground">لتمييز اسم الشركة بلون مختلف في القوائم</p>
+                    </div>
+                    <input type="checkbox" className="h-4 w-4 accent-primary" checked={form.is_insurance} onChange={e => setForm({ ...form, is_insurance: e.target.checked })} />
+                  </label>
+                )}
                 <div className="flex gap-2">
                   <Button variant="outline" onClick={() => setEditing(false)} className="flex-1">إلغاء</Button>
                   <Button onClick={saveEdit} className="flex-1"><Save className="h-4 w-4 ml-2" /> حفظ</Button>
