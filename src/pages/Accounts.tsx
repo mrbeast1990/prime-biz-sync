@@ -107,9 +107,12 @@ export default function Accounts() {
   const ContactCards = ({ contacts, type }: { contacts: Contact[]; type: 'customer' | 'supplier' }) => (
     <div className="space-y-3 md:hidden">
       {contacts.map(c => (
-        <div key={c.id} className="rounded-xl bg-card p-4 shadow-card cursor-pointer active:scale-[0.98] transition-transform" onClick={() => openContact(c, type)}>
+        <div key={c.id} className={cn('rounded-xl bg-card p-4 shadow-card cursor-pointer active:scale-[0.98] transition-transform', c.is_insurance && 'ring-1 ring-primary/40')} onClick={() => openContact(c, type)}>
           <div className="flex items-center justify-between">
-            <p className="font-medium text-card-foreground">{c.name}</p>
+            <p className={cn('font-medium', c.is_insurance ? 'text-primary' : 'text-card-foreground')}>
+              {c.name}
+              {c.is_insurance && <span className="mr-2 inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary"><Shield className="h-3 w-3" />تأمين</span>}
+            </p>
             {renderBalance(getContactBalance(c.id))}
           </div>
           <div className="mt-1 text-sm text-muted-foreground flex gap-3">
@@ -198,7 +201,10 @@ export default function Accounts() {
                 <TableBody>
                   {filterContacts(suppliers).map(c => (
                     <TableRow key={c.id} className="cursor-pointer hover:bg-muted/50" onClick={() => openContact(c, 'supplier')}>
-                      <TableCell className="font-medium">{c.name}</TableCell>
+                      <TableCell className={cn('font-medium', c.is_insurance && 'text-primary')}>
+                        {c.name}
+                        {c.is_insurance && <span className="mr-2 inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary"><Shield className="h-3 w-3" />تأمين</span>}
+                      </TableCell>
                       <TableCell dir="ltr" className="text-right">{c.phone}</TableCell>
                       <TableCell>{c.address}</TableCell>
                       <TableCell>{renderBalance(getContactBalance(c.id))}</TableCell>
