@@ -31,6 +31,7 @@ export interface Contact {
   email: string;
   address: string;
   balance: number;
+  is_insurance?: boolean;
   created_at: string;
   updated_at?: string;
 }
