@@ -213,9 +213,18 @@ export function useCreateInsuranceSale() {
         if (itemsError) throw itemsError;
       }
 
+      // Compute next dispense date = sale_date + 28 days
+      const baseDate = sale_date ? new Date(sale_date) : new Date();
+      baseDate.setDate(baseDate.getDate() + 28);
+      const nextDate = baseDate.toISOString().slice(0, 10);
+      await supabase.from('insurance_customers').update({ next_dispense_date: nextDate }).eq('id', sale.customer_id);
+
       return data;
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['insurance_sales'] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['insurance_sales'] });
+      queryClient.invalidateQueries({ queryKey: ['insurance_customers'] });
+    },
   });
 }
 
