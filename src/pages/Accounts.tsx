@@ -215,18 +215,23 @@ export default function Accounts() {
             <div className="hidden md:block rounded-xl bg-card shadow-card overflow-hidden">
               <Table>
                 <TableHeader><TableRow>
-                  <TableHead className="text-right">الاسم</TableHead><TableHead className="text-right">رقم البطاقة</TableHead><TableHead className="text-right">الهاتف</TableHead><TableHead className="text-right">إجمالي المبيعات</TableHead>
+                  <TableHead className="text-right">الاسم</TableHead><TableHead className="text-right">رقم البطاقة</TableHead><TableHead className="text-right">الهاتف</TableHead><TableHead className="text-right">إجمالي المبيعات</TableHead><TableHead className="text-right">إجراءات</TableHead>
                 </TableRow></TableHeader>
                 <TableBody>
                   {filterInsurance().map(c => (
-                    <TableRow key={c.id} className="cursor-pointer hover:bg-muted/50" onClick={() => openInsurance(c)}>
-                      <TableCell className="font-medium">{c.name}</TableCell>
-                      <TableCell>{c.card_number || '—'}</TableCell>
-                      <TableCell dir="ltr" className="text-right">{c.phone || '—'}</TableCell>
-                      <TableCell className="tabular-nums font-medium">{getInsuranceSalesTotal(c.id).toFixed(2)} د.ل</TableCell>
+                    <TableRow key={c.id} className="cursor-pointer hover:bg-muted/50">
+                      <TableCell className="font-medium" onClick={() => openInsurance(c)}>{c.name}</TableCell>
+                      <TableCell onClick={() => openInsurance(c)}>{c.card_number || '—'}</TableCell>
+                      <TableCell dir="ltr" className="text-right" onClick={() => openInsurance(c)}>{c.phone || '—'}</TableCell>
+                      <TableCell className="tabular-nums font-medium" onClick={() => openInsurance(c)}>{getInsuranceSalesTotal(c.id).toFixed(2)} د.ل</TableCell>
+                      <TableCell>
+                        <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); setMedsCustomer(c); }} title="العلاج الافتراضي">
+                          <Pill className="h-4 w-4 text-primary" />
+                        </Button>
+                      </TableCell>
                     </TableRow>
                   ))}
-                  {filterInsurance().length === 0 && <TableRow><TableCell colSpan={4} className="text-center py-8 text-muted-foreground">لا يوجد عملاء تأمين</TableCell></TableRow>}
+                  {filterInsurance().length === 0 && <TableRow><TableCell colSpan={5} className="text-center py-8 text-muted-foreground">لا يوجد عملاء تأمين</TableCell></TableRow>}
                 </TableBody>
               </Table>
             </div>
