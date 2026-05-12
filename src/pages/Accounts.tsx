@@ -6,9 +6,10 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { Search, Users, Truck, Shield, Loader2, Plus } from 'lucide-react';
+import { Search, Users, Truck, Shield, Loader2, Plus, Pill } from 'lucide-react';
 import { Contact, InsuranceCustomer } from '@/types';
 import { AccountDetailsDialog } from '@/components/accounts/AccountDetailsDialog';
+import { DefaultMedicationsDialog } from '@/components/insurance/DefaultMedicationsDialog';
 import { useContacts, useInsuranceCustomers, useInsuranceSales, useInvoices, useCreateContact, useCreateInsuranceCustomer } from '@/hooks/useSupabaseData';
 import { cn } from '@/lib/utils';
 import { toast } from '@/hooks/use-toast';
@@ -26,6 +27,7 @@ export default function Accounts() {
   const [selectedInsurance, setSelectedInsurance] = useState<InsuranceCustomer | null>(null);
   const [dialogType, setDialogType] = useState<'customer' | 'supplier' | 'insurance'>('customer');
   const [activeTab, setActiveTab] = useState('customers');
+  const [medsCustomer, setMedsCustomer] = useState<InsuranceCustomer | null>(null);
 
   // Add contact/insurance dialog
   const [showAddDialog, setShowAddDialog] = useState(false);
@@ -125,12 +127,17 @@ export default function Accounts() {
     return (
       <div className="space-y-3 md:hidden">
         {list.map(c => (
-          <div key={c.id} className="rounded-xl bg-card p-4 shadow-card cursor-pointer active:scale-[0.98] transition-transform" onClick={() => openInsurance(c)}>
+          <div key={c.id} className="rounded-xl bg-card p-4 shadow-card">
             <div className="flex items-center justify-between">
-              <p className="font-medium text-card-foreground">{c.name}</p>
-              <span className="tabular-nums font-medium">{getInsuranceSalesTotal(c.id).toFixed(2)} د.ل</span>
+              <p className="font-medium text-card-foreground cursor-pointer flex-1" onClick={() => openInsurance(c)}>{c.name}</p>
+              <div className="flex items-center gap-2">
+                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); setMedsCustomer(c); }} title="العلاج الافتراضي">
+                  <Pill className="h-4 w-4 text-primary" />
+                </Button>
+                <span className="tabular-nums font-medium" onClick={() => openInsurance(c)}>{getInsuranceSalesTotal(c.id).toFixed(2)} د.ل</span>
+              </div>
             </div>
-            <div className="mt-1 text-sm text-muted-foreground flex gap-3">
+            <div className="mt-1 text-sm text-muted-foreground flex gap-3 cursor-pointer" onClick={() => openInsurance(c)}>
               {c.card_number && <span>{c.card_number}</span>}
               {c.phone && <span dir="ltr">{c.phone}</span>}
             </div>
@@ -208,18 +215,23 @@ export default function Accounts() {
             <div className="hidden md:block rounded-xl bg-card shadow-card overflow-hidden">
               <Table>
                 <TableHeader><TableRow>
-                  <TableHead className="text-right">الاسم</TableHead><TableHead className="text-right">رقم البطاقة</TableHead><TableHead className="text-right">الهاتف</TableHead><TableHead className="text-right">إجمالي المبيعات</TableHead>
+                  <TableHead className="text-right">الاسم</TableHead><TableHead className="text-right">رقم البطاقة</TableHead><TableHead className="text-right">الهاتف</TableHead><TableHead className="text-right">إجمالي المبيعات</TableHead><TableHead className="text-right">إجراءات</TableHead>
                 </TableRow></TableHeader>
                 <TableBody>
                   {filterInsurance().map(c => (
-                    <TableRow key={c.id} className="cursor-pointer hover:bg-muted/50" onClick={() => openInsurance(c)}>
-                      <TableCell className="font-medium">{c.name}</TableCell>
-                      <TableCell>{c.card_number || '—'}</TableCell>
-                      <TableCell dir="ltr" className="text-right">{c.phone || '—'}</TableCell>
-                      <TableCell className="tabular-nums font-medium">{getInsuranceSalesTotal(c.id).toFixed(2)} د.ل</TableCell>
+                    <TableRow key={c.id} className="cursor-pointer hover:bg-muted/50">
+                      <TableCell className="font-medium" onClick={() => openInsurance(c)}>{c.name}</TableCell>
+                      <TableCell onClick={() => openInsurance(c)}>{c.card_number || '—'}</TableCell>
+                      <TableCell dir="ltr" className="text-right" onClick={() => openInsurance(c)}>{c.phone || '—'}</TableCell>
+                      <TableCell className="tabular-nums font-medium" onClick={() => openInsurance(c)}>{getInsuranceSalesTotal(c.id).toFixed(2)} د.ل</TableCell>
+                      <TableCell>
+                        <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); setMedsCustomer(c); }} title="العلاج الافتراضي">
+                          <Pill className="h-4 w-4 text-primary" />
+                        </Button>
+                      </TableCell>
                     </TableRow>
                   ))}
-                  {filterInsurance().length === 0 && <TableRow><TableCell colSpan={4} className="text-center py-8 text-muted-foreground">لا يوجد عملاء تأمين</TableCell></TableRow>}
+                  {filterInsurance().length === 0 && <TableRow><TableCell colSpan={5} className="text-center py-8 text-muted-foreground">لا يوجد عملاء تأمين</TableCell></TableRow>}
                 </TableBody>
               </Table>
             </div>
@@ -234,6 +246,15 @@ export default function Accounts() {
         insuranceCustomer={selectedInsurance}
         type={dialogType}
       />
+
+      {medsCustomer && (
+        <DefaultMedicationsDialog
+          isOpen={!!medsCustomer}
+          onClose={() => setMedsCustomer(null)}
+          customerId={medsCustomer.id}
+          customerName={medsCustomer.name}
+        />
+      )}
 
       {/* Add Dialog */}
       <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
