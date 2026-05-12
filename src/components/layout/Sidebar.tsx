@@ -2,7 +2,7 @@ import { useRef, useEffect, useState, useCallback } from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, Package, ShoppingCart, Settings, ChevronRight, ChevronLeft,
-  Zap, Shield, Truck, Users, Wallet, BarChart3, UserCog,
+  Zap, Shield, Truck, Users, Wallet, BarChart3, UserCog, Upload,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useSidebarContext } from '@/contexts/SidebarContext';
@@ -23,6 +23,7 @@ const navItems: NavItem[] = [
   { title: 'الحسابات', href: '/accounts', icon: Users },
   { title: 'الخزينة', href: '/treasury', icon: Wallet },
   { title: 'التقارير', href: '/reports', icon: BarChart3 },
+  { title: 'استيراد تاريخي', href: '/import-historical', icon: Upload },
   { title: 'إدارة المستخدمين', href: '/users', icon: UserCog },
   { title: 'الإعدادات', href: '/settings', icon: Settings },
   { title: 'لوحة التحكم', href: '/', icon: LayoutDashboard },
