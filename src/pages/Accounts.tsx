@@ -27,6 +27,7 @@ export default function Accounts() {
   const [selectedInsurance, setSelectedInsurance] = useState<InsuranceCustomer | null>(null);
   const [dialogType, setDialogType] = useState<'customer' | 'supplier' | 'insurance'>('customer');
   const [activeTab, setActiveTab] = useState('customers');
+  const [medsCustomer, setMedsCustomer] = useState<InsuranceCustomer | null>(null);
 
   // Add contact/insurance dialog
   const [showAddDialog, setShowAddDialog] = useState(false);
