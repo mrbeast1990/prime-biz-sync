@@ -1,0 +1,1 @@
+ALTER TABLE public.insurance_customers ADD COLUMN IF NOT EXISTS next_dispense_date date;
