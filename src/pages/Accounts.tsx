@@ -161,6 +161,10 @@ export default function Accounts() {
             <Search className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="بحث بالاسم أو الهاتف..." className="pr-9" />
           </div>
+          <label className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer select-none">
+            <Switch checked={showArchived} onCheckedChange={setShowArchived} />
+            <Archive className="h-4 w-4" /> إظهار المؤرشفة
+          </label>
           <Button onClick={() => setShowAddDialog(true)} size="sm"><Plus className="h-4 w-4 ml-1" /> إضافة {addLabel}</Button>
         </div>
 
