@@ -6,7 +6,8 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { Search, Users, Truck, Shield, Loader2, Plus, Pill } from 'lucide-react';
+import { Search, Users, Truck, Shield, Loader2, Plus, Pill, Archive } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
 import { Contact, InsuranceCustomer } from '@/types';
 import { AccountDetailsDialog } from '@/components/accounts/AccountDetailsDialog';
 import { DefaultMedicationsDialog } from '@/components/insurance/DefaultMedicationsDialog';
@@ -28,6 +29,7 @@ export default function Accounts() {
   const [dialogType, setDialogType] = useState<'customer' | 'supplier' | 'insurance'>('customer');
   const [activeTab, setActiveTab] = useState('customers');
   const [medsCustomer, setMedsCustomer] = useState<InsuranceCustomer | null>(null);
+  const [showArchived, setShowArchived] = useState(false);
 
   // Add contact/insurance dialog
   const [showAddDialog, setShowAddDialog] = useState(false);
@@ -39,14 +41,14 @@ export default function Accounts() {
   const filterContacts = (contacts: Contact[]) =>
     contacts.filter(c => {
       const matchesSearch = c.name.includes(searchQuery) || (c.phone || '').includes(searchQuery);
-      if (!searchQuery && getContactBalance(c.id) === 0) return false;
+      if (!searchQuery && !showArchived && getContactBalance(c.id) === 0) return false;
       return matchesSearch;
     });
 
   const filterInsurance = () =>
     insuranceCustomers.filter(c => {
       const matchesSearch = c.name.includes(searchQuery) || (c.card_number || '').includes(searchQuery) || (c.phone || '').includes(searchQuery);
-      if (!searchQuery && getInsuranceSalesTotal(c.id) === 0) return false;
+      if (!searchQuery && !showArchived && getInsuranceSalesTotal(c.id) === 0) return false;
       return matchesSearch;
     });
 
@@ -159,6 +161,10 @@ export default function Accounts() {
             <Search className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="بحث بالاسم أو الهاتف..." className="pr-9" />
           </div>
+          <label className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer select-none">
+            <Switch checked={showArchived} onCheckedChange={setShowArchived} />
+            <Archive className="h-4 w-4" /> إظهار المؤرشفة
+          </label>
           <Button onClick={() => setShowAddDialog(true)} size="sm"><Plus className="h-4 w-4 ml-1" /> إضافة {addLabel}</Button>
         </div>
 
