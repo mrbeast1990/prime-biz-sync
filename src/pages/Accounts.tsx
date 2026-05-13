@@ -29,6 +29,7 @@ export default function Accounts() {
   const [dialogType, setDialogType] = useState<'customer' | 'supplier' | 'insurance'>('customer');
   const [activeTab, setActiveTab] = useState('customers');
   const [medsCustomer, setMedsCustomer] = useState<InsuranceCustomer | null>(null);
+  const [showArchived, setShowArchived] = useState(false);
 
   // Add contact/insurance dialog
   const [showAddDialog, setShowAddDialog] = useState(false);
@@ -40,14 +41,14 @@ export default function Accounts() {
   const filterContacts = (contacts: Contact[]) =>
     contacts.filter(c => {
       const matchesSearch = c.name.includes(searchQuery) || (c.phone || '').includes(searchQuery);
-      if (!searchQuery && getContactBalance(c.id) === 0) return false;
+      if (!searchQuery && !showArchived && getContactBalance(c.id) === 0) return false;
       return matchesSearch;
     });
 
   const filterInsurance = () =>
     insuranceCustomers.filter(c => {
       const matchesSearch = c.name.includes(searchQuery) || (c.card_number || '').includes(searchQuery) || (c.phone || '').includes(searchQuery);
-      if (!searchQuery && getInsuranceSalesTotal(c.id) === 0) return false;
+      if (!searchQuery && !showArchived && getInsuranceSalesTotal(c.id) === 0) return false;
       return matchesSearch;
     });
 
