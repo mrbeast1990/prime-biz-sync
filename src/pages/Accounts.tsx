@@ -127,18 +127,31 @@ export default function Accounts() {
     </div>
   );
 
+  const DefaultPrescriptionButton = ({ customer, className }: { customer: InsuranceCustomer; className?: string }) => (
+    <Button
+      variant="ghost"
+      size="icon"
+      className={cn('h-8 w-8 shrink-0 rounded-full bg-primary/10 hover:bg-primary/20', className)}
+      onClick={(e) => { e.stopPropagation(); setMedsCustomer(customer); }}
+      title="الوصفة الافتراضية"
+      aria-label={`الوصفة الافتراضية - ${customer.name}`}
+    >
+      <Pill className="h-4 w-4 text-primary" />
+    </Button>
+  );
+
   const InsuranceCards = () => {
     const list = filterInsurance();
     return (
       <div className="space-y-3 md:hidden">
         {list.map(c => (
           <div key={c.id} className="rounded-xl bg-card p-4 shadow-card">
-            <div className="flex items-center justify-between">
-              <p className="font-medium text-card-foreground cursor-pointer flex-1" onClick={() => openInsurance(c)}>{c.name}</p>
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex min-w-0 flex-1 items-center gap-2" onClick={() => openInsurance(c)}>
+                <p className="truncate font-medium text-card-foreground cursor-pointer">{c.name}</p>
+                <DefaultPrescriptionButton customer={c} />
+              </div>
               <div className="flex items-center gap-2">
-                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); setMedsCustomer(c); }} title="العلاج الافتراضي">
-                  <Pill className="h-4 w-4 text-primary" />
-                </Button>
                 <span className="tabular-nums font-medium" onClick={() => openInsurance(c)}>{getInsuranceSalesTotal(c.id).toFixed(2)} د.ل</span>
               </div>
             </div>
@@ -227,23 +240,23 @@ export default function Accounts() {
             <div className="hidden md:block rounded-xl bg-card shadow-card overflow-hidden">
               <Table>
                 <TableHeader><TableRow>
-                  <TableHead className="text-right">الاسم</TableHead><TableHead className="text-right">رقم البطاقة</TableHead><TableHead className="text-right">الهاتف</TableHead><TableHead className="text-right">إجمالي المبيعات</TableHead><TableHead className="text-right">إجراءات</TableHead>
+                  <TableHead className="text-right">الاسم</TableHead><TableHead className="text-right">رقم البطاقة</TableHead><TableHead className="text-right">الهاتف</TableHead><TableHead className="text-right">إجمالي المبيعات</TableHead>
                 </TableRow></TableHeader>
                 <TableBody>
                   {filterInsurance().map(c => (
                     <TableRow key={c.id} className="cursor-pointer hover:bg-muted/50">
-                      <TableCell className="font-medium" onClick={() => openInsurance(c)}>{c.name}</TableCell>
+                      <TableCell className="font-medium" onClick={() => openInsurance(c)}>
+                        <div className="flex items-center gap-2">
+                          <span>{c.name}</span>
+                          <DefaultPrescriptionButton customer={c} />
+                        </div>
+                      </TableCell>
                       <TableCell onClick={() => openInsurance(c)}>{c.card_number || '—'}</TableCell>
                       <TableCell dir="ltr" className="text-right" onClick={() => openInsurance(c)}>{c.phone || '—'}</TableCell>
                       <TableCell className="tabular-nums font-medium" onClick={() => openInsurance(c)}>{getInsuranceSalesTotal(c.id).toFixed(2)} د.ل</TableCell>
-                      <TableCell>
-                        <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); setMedsCustomer(c); }} title="العلاج الافتراضي">
-                          <Pill className="h-4 w-4 text-primary" />
-                        </Button>
-                      </TableCell>
                     </TableRow>
                   ))}
-                  {filterInsurance().length === 0 && <TableRow><TableCell colSpan={5} className="text-center py-8 text-muted-foreground">لا يوجد عملاء تأمين</TableCell></TableRow>}
+                  {filterInsurance().length === 0 && <TableRow><TableCell colSpan={4} className="text-center py-8 text-muted-foreground">لا يوجد عملاء تأمين</TableCell></TableRow>}
                 </TableBody>
               </Table>
             </div>
